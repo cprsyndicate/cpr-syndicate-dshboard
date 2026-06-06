@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CPR Syndicate — Dashboard</title>
+<style>
+  /* ============================================================
+     CONFIG is in the <script> at the bottom — paste your Google
+     Calendar API key + public calendar ID there.
+     ============================================================ */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --purple: #6D3BF5;
+    --purple-2: #7C3AED;
+    --purple-dim: #EEEAFE;
+    --purple-dim-2: #F4F1FF;
+    --bg: #F5F5FA;
+    --card: #FFFFFF;
+    --ink: #1B1B2E;
+    --muted: #8A8A99;
+    --border: #E6E6F0;
+    --green: #16A34A;
+    --green-bg: #F0FDF4;
+    --amber: #D97706;
+    --amber-bg: #FFFBEB;
+    --red: #EF4444;
+    --red-bg: #FEF2F2;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    display: flex;
+    min-height: 100vh;
+  }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    width: 220px;
+    background: var(--card);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 22px 14px;
+    gap: 4px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+  }
+  .logo {
+    display: flex; align-items: center; gap: 10px;
+    padding: 6px 8px 18px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 10px;
+  }
+  .logo-icon {
+    width: 34px; height: 34px;
+    background: linear-gradient(135deg, var(--purple-2), var(--purple));
+    border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 20px; font-weight: 700;
+  }
+  .logo-text { font-size: 14px; font-weight: 800; letter-spacing: -.01em; line-height: 1.1; }
+  .logo-text span { display: block; font-weight: 500; color: var(--muted); font-size: 11px; }
+
+  .nav-label {
+    font-size: 10px; font-weight: 700; color: var(--muted);
+    text-transform: uppercase; letter-spacing: .09em;
+    padding: 14px 10px 4px;
+  }
+  .nav-item {
+    display: flex; align-items: center; gap: 11px;
+    padding: 10px 12px; border-radius: 10px;
+    font-size: 14px; font-weight: 500; color: var(--muted);
+    cursor: pointer; transition: all .15s; border: none; background: none;
+    width: 100%; text-align: left;
+  }
+  .nav-item:hover { background: var(--purple-dim-2); color: var(--purple); }
+  .nav-item.active { background: var(--purple-dim); color: var(--purple); font-weight: 700; }
+  .nav-item .icon { font-size: 16px; width: 18px; text-align: center; }
+
+  .sidebar-footer { margin-top: auto; padding-top: 14px; border-top: 1px solid var(--border); }
+  .avatar-row { display: flex; align-items: center; gap: 10px; padding: 6px 8px; }
+  .avatar {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--purple-2), var(--purple));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; color: #fff; font-weight: 700;
+  }
+  .avatar-info .name { font-size: 12px; font-weight: 600; }
+  .avatar-info .role { font-size: 11px; color: var(--muted); }
+
+  /* ── MAIN ── */
+  .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  .topbar {
+    background: var(--card); border-bottom: 1px solid var(--border);
+    padding: 14px 26px; display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 20;
+  }
+  .topbar-left h1 { font-size: 18px; font-weight: 800; letter-spacing: -.02em; }
+  .topbar-left p { font-size: 12.5px; color: var(--muted); margin-top: 1px; }
+  .topbar-right { display: flex; align-items: center; gap: 10px; }
+
+  .select {
+    appearance: none; -webkit-appearance: none;
+    background: var(--bg) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%238A8A99' stroke-width='1.5' fill='none' stroke-linecap='round'/></svg>") no-repeat right 12px center;
+    border: 1px solid var(--border); border-radius: 10px;
+    padding: 8px 30px 8px 12px; font-size: 13px; color: var(--ink);
+    font-weight: 600; cursor: pointer;
+  }
+  .btn-primary {
+    background: var(--purple); color: #fff; border: none;
+    padding: 9px 16px; border-radius: 10px; font-size: 13px; font-weight: 700;
+    cursor: pointer; transition: background .15s;
+  }
+  .btn-primary:hover { background: var(--purple-2); }
+
+  .content { padding: 22px 26px 40px; flex: 1; }
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* ── BANNER ── */
+  .banner {
+    display: flex; align-items: center; gap: 10px;
+    border-radius: 12px; padding: 11px 16px; font-size: 13px; font-weight: 500;
+    margin-bottom: 18px;
+  }
+  .banner.ok { background: var(--green-bg); color: var(--green); }
+  .banner.warn { background: var(--amber-bg); color: var(--amber); }
+  .banner.err { background: var(--red-bg); color: var(--red); }
+  .banner code { background: rgba(0,0,0,.06); padding: 1px 6px; border-radius: 5px; font-size: 12px; }
+
+  /* ── CALENDAR ── */
+  .cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+  .cal-nav { display: flex; align-items: center; gap: 8px; }
+  .cal-month { font-size: 17px; font-weight: 800; letter-spacing: -.02em; min-width: 170px; }
+  .icon-btn {
+    width: 34px; height: 34px; border-radius: 9px; border: 1px solid var(--border);
+    background: #fff; display: flex; align-items: center; justify-content: center;
+    font-size: 15px; cursor: pointer; color: var(--ink);
+  }
+  .icon-btn:hover { background: var(--purple-dim-2); border-color: var(--purple); color: var(--purple); }
+  .pill-group { display: flex; gap: 4px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 3px; }
+  .pill {
+    font-size: 12px; padding: 6px 12px; border-radius: 8px; cursor: pointer;
+    color: var(--muted); font-weight: 600; border: none; background: none;
+  }
+  .pill.active { background: #fff; color: var(--purple); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+  .cal-dow {
+    font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase;
+    letter-spacing: .06em; text-align: center; padding: 4px 0;
+  }
+  .cal-cell {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    min-height: 116px; padding: 8px; display: flex; flex-direction: column; gap: 5px;
+  }
+  .cal-cell.empty { background: transparent; border: none; }
+  .cal-cell.today { border-color: var(--purple); box-shadow: 0 0 0 1px var(--purple); }
+  .cal-date { font-size: 12px; font-weight: 700; color: var(--ink); display: flex; justify-content: space-between; align-items: center; }
+  .cal-cell.today .cal-date .num {
+    background: var(--purple); color: #fff; width: 20px; height: 20px;
+    border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 11px;
+  }
+  .seats { font-size: 10px; color: var(--muted); font-weight: 600; }
+  .evt {
+    font-size: 10.5px; padding: 3px 6px; border-radius: 6px; line-height: 1.25;
+    background: var(--purple-dim); color: var(--purple); font-weight: 600;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: default;
+  }
+  .evt .t { opacity: .7; font-weight: 700; margin-right: 3px; }
+  .cap-bar { height: 4px; border-radius: 3px; background: var(--border); overflow: hidden; margin-top: auto; }
+  .cap-bar > i { display: block; height: 100%; background: var(--purple-2); border-radius: 3px; }
+  .cap-bar.full > i { background: var(--red); }
+  .more { font-size: 10px; color: var(--purple); font-weight: 700; cursor: pointer; }
+
+  .legend { display: flex; gap: 18px; margin-top: 16px; flex-wrap: wrap; }
+  .legend span { font-size: 11.5px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+  .legend i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+
+  /* ── KANBAN ── */
+  .filters { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; align-items: center; }
+  .filter-label { font-size: 12px; color: var(--muted); font-weight: 600; margin-right: 4px; }
+  .chip {
+    font-size: 12px; padding: 6px 13px; border-radius: 100px; cursor: pointer;
+    border: 1px solid var(--border); background: #fff; color: var(--muted); font-weight: 600;
+  }
+  .chip.active { background: var(--purple-dim); color: var(--purple); border-color: transparent; }
+
+  .kanban { display: grid; grid-auto-flow: column; grid-auto-columns: 270px; gap: 14px; overflow-x: auto; padding-bottom: 12px; }
+  .col { background: var(--bg); border: 1px solid var(--border); border-radius: 14px; padding: 12px; }
+  .col-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; padding: 0 2px; }
+  .col-title { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; }
+  .col-count { font-size: 11px; font-weight: 700; color: var(--muted); background: var(--card); border: 1px solid var(--border); border-radius: 100px; padding: 1px 8px; }
+  .col-body { display: flex; flex-direction: column; gap: 9px; min-height: 30px; }
+
+  .lead-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 12px; cursor: default; transition: box-shadow .15s, transform .15s;
+  }
+  .lead-card:hover { box-shadow: 0 6px 18px -10px rgba(27,27,46,.35); transform: translateY(-1px); }
+  .lc-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+  .lc-name { font-size: 13.5px; font-weight: 700; }
+  .lc-amt { font-size: 13px; font-weight: 800; color: var(--ink); }
+  .lc-meta { font-size: 11.5px; color: var(--muted); margin-bottom: 4px; }
+  .lc-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .tag { font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 100px; }
+  .tag-bls { background: var(--purple-dim); color: var(--purple); }
+  .tag-hs  { background: #FFF7ED; color: #EA7C1E; }
+  .tag-arc { background: var(--red-bg); color: #E11D48; }
+  .tag-acls{ background: #FEF2F2; color: #E11D48; }
+  .src { font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 100px; }
+  .src-paid { background: #FEF3C7; color: #B45309; }
+  .src-organic { background: var(--green-bg); color: var(--green); }
+  .src-manual { background: #EEF2FF; color: #4F46E5; }
+  .lc-time { font-size: 10.5px; color: var(--muted); margin-top: 8px; }
+  .lc-actions { display: flex; gap: 6px; margin-top: 10px; }
+  .mini-btn {
+    flex: 1; font-size: 11.5px; font-weight: 700; padding: 6px; border-radius: 8px;
+    border: 1px solid var(--border); background: #fff; color: var(--muted); cursor: pointer;
+  }
+  .mini-btn:hover { border-color: var(--purple); color: var(--purple); }
+  .mini-btn.win:hover { border-color: var(--green); color: var(--green); background: var(--green-bg); }
+  .mini-btn.lose:hover { border-color: var(--red); color: var(--red); background: var(--red-bg); }
+
+  /* touch strip */
+  .strip { display: flex; gap: 4px; margin-top: 10px; }
+  .strip-cell { flex: 1; text-align: center; }
+  .strip-dot {
+    width: 100%; height: 4px; border-radius: 2px; background: var(--border); margin-bottom: 3px;
+  }
+  .strip-dot.sent { background: var(--green); }
+  .strip-dot.skipped { background: #D1D5DB; }
+  .strip-dot.due { background: var(--amber); }
+  .strip-lbl { font-size: 8.5px; color: var(--muted); font-weight: 700; }
+  .strip-cell.due .strip-lbl { color: var(--amber); }
+
+  .scoreboard { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
+  .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 15px 17px; }
+  .stat-label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 7px; }
+  .stat-value { font-size: 26px; font-weight: 800; line-height: 1; letter-spacing: -.02em; }
+  .stat-value.purple { color: var(--purple); }
+  .stat-sub { font-size: 11.5px; color: var(--green); font-weight: 600; margin-top: 6px; }
+
+  @media (max-width: 900px) {
+    .sidebar { display: none; }
+    .scoreboard { grid-template-columns: 1fr 1fr; }
+    .cal-grid { font-size: 11px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-icon">+</div>
+    <div class="logo-text">CPR Syndicate<span>Team Dashboard</span></div>
+  </div>
+  <span class="nav-label">Operations</span>
+  <button class="nav-item active" data-view="schedule"><span class="icon">🗓️</span> Schedule</button>
+  <button class="nav-item" data-view="instructors"><span class="icon">👤</span> Instructors</button>
+  <button class="nav-item" data-view="locations"><span class="icon">📍</span> Locations</button>
+  <button class="nav-item" data-view="analytics"><span class="icon">📊</span> Analytics</button>
+  <button class="nav-item" data-view="leads"><span class="icon">🟡</span> Leads</button>
+  <button class="nav-item" data-view="renewals"><span class="icon">🔄</span> Renewals</button>
+  <div class="sidebar-footer">
+    <div class="avatar-row">
+      <div class="avatar">CS</div>
+      <div class="avatar-info"><div class="name">Syndicate Admin</div><div class="role">Owner</div></div>
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<div class="main">
+  <header class="topbar">
+    <div class="topbar-left">
+      <h1 id="page-title">Schedule</h1>
+      <p id="page-sub">All 12 locations on one clock</p>
+    </div>
+    <div class="topbar-right">
+      <button class="btn-primary">+ Manual Booking</button>
+    </div>
+  </header>
+
+  <div class="content">
+
+    <!-- ============ MASTER SCHEDULE (embedded) ============ -->
+    <section class="view active" id="view-schedule" style="margin:-22px -26px -40px;">
+      <iframe src="schedule.html?embed=1" title="Master Schedule" style="width:100%;height:calc(100vh - 64px);border:0;display:block;"></iframe>
+    </section>
+
+    <!-- ============ INSTRUCTOR SCHEDULE (embedded) ============ -->
+    <section class="view" id="view-instructors" style="margin:-22px -26px -40px;">
+      <iframe src="instructors.html?embed=1" title="Instructor Schedule" style="width:100%;height:calc(100vh - 64px);border:0;display:block;"></iframe>
+    </section>
+
+    <!-- ============ LOCATIONS (embedded) ============ -->
+    <section class="view" id="view-locations" style="margin:-22px -26px -40px;">
+      <iframe src="locations.html?embed=1" title="Certifications by Location" style="width:100%;height:calc(100vh - 64px);border:0;display:block;"></iframe>
+    </section>
+
+    <!-- ============ ANALYTICS (embedded) ============ -->
+    <section class="view" id="view-analytics" style="margin:-22px -26px -40px;">
+      <iframe src="analytics.html?embed=1" title="Analytics" style="width:100%;height:calc(100vh - 64px);border:0;display:block;"></iframe>
+    </section>
+
+    <!-- ============ LEADS ============ -->
+    <section class="view" id="view-leads">
+      <div class="scoreboard">
+        <div class="stat-card"><div class="stat-label">Pending Leads</div><div class="stat-value purple" id="kpi-pending">0</div><div class="stat-sub" id="kpi-pending-sub">in pipeline</div></div>
+        <div class="stat-card"><div class="stat-label">Won (This Month)</div><div class="stat-value" id="kpi-won">0</div><div class="stat-sub">conversions</div></div>
+        <div class="stat-card"><div class="stat-label">Conversion Rate</div><div class="stat-value" id="kpi-conv">0%</div><div class="stat-sub">won ÷ total</div></div>
+        <div class="stat-card"><div class="stat-label">At-Risk $</div><div class="stat-value" id="kpi-risk">$0</div><div class="stat-sub" style="color:var(--amber)">pending revenue</div></div>
+      </div>
+      <div class="filters">
+        <span class="filter-label">Source</span>
+        <button class="chip active" data-leadsrc="all">All</button>
+        <button class="chip" data-leadsrc="paid_ad">💰 Paid Ad</button>
+        <button class="chip" data-leadsrc="organic">🌱 Organic</button>
+        <button class="chip" data-leadsrc="manual">✋ Manual</button>
+      </div>
+      <div class="kanban" id="leads-kanban"></div>
+    </section>
+
+    <!-- ============ RENEWALS ============ -->
+    <section class="view" id="view-renewals">
+      <div class="scoreboard">
+        <div class="stat-card"><div class="stat-label">In Renewal Window</div><div class="stat-value purple" id="kpi-renew">0</div><div class="stat-sub">within 90 days</div></div>
+        <div class="stat-card"><div class="stat-label">Renewed (This Month)</div><div class="stat-value" id="kpi-renewed">0</div><div class="stat-sub">re-booked</div></div>
+        <div class="stat-card"><div class="stat-label">Renewal Rate</div><div class="stat-value" id="kpi-renewrate">0%</div><div class="stat-sub">won ÷ contacted</div></div>
+        <div class="stat-card"><div class="stat-label">Due Now</div><div class="stat-value" id="kpi-due" style="color:var(--amber)">0</div><div class="stat-sub" style="color:var(--amber)">touch pending</div></div>
+      </div>
+      <div class="kanban" id="renewals-kanban"></div>
+    </section>
+
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   1) CONFIG — paste your Google Calendar credentials here.
+   Leave blank to run on demo data.
+
+   How to get these:
+   - GCAL_ID:  In Google Calendar → Settings → (your calendar) →
+               "Integrate calendar" → copy the "Calendar ID"
+               (looks like  xxxx@group.calendar.google.com).
+               The calendar MUST be set to public:
+               Settings → Access permissions → "Make available to public".
+   - API_KEY:  console.cloud.google.com → create a project →
+               enable "Google Calendar API" → Credentials →
+               Create credentials → API key. (Optionally restrict it
+               to the Calendar API + your dashboard's domain.)
+   ============================================================ */
+const CONFIG = {
+  GCAL_API_KEY: '',                       // <-- paste API key
+  GCAL_ID: '',                            // <-- paste calendar ID
+  CAPACITY_PER_DAY: 8,                    // seats per location per day
+  // Map words found in an event title/location to a course tag class.
+  // Used only for the colored pill on calendar/lead cards.
+};
+
+/* ---- LOCATIONS (from your booking widget) ---- */
+const LOCATIONS = ['Tempe','Long Beach','Los Angeles (DTLA)','Pasadena','San Francisco','Atlanta','Indianapolis'];
+
+/* ---- COURSE helpers ---- */
+function courseTag(text='') {
+  const t = text.toLowerCase();
+  if (t.includes('bls')) return {cls:'tag-bls', label:'BLS'};
+  if (t.includes('acls') || t.includes('pals')) return {cls:'tag-acls', label: t.includes('pals')?'PALS':'ACLS'};
+  if (t.includes('red cross') || t.includes('arc')) return {cls:'tag-arc', label:'Red Cross'};
+  return {cls:'tag-hs', label:'Heartsaver'};
+}
+
+function esc(s){ return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+/* ============================================================
+   4) LEADS PIPELINE (kanban) — demo data on the West Covina model
+   ============================================================ */
+const LEAD_STAGES = [
+  {key:'new',     title:'New Lead'},
+  {key:'nudged',  title:'Followed Up'},
+  {key:'lastchance', title:'Last Chance'},
+  {key:'won',     title:'Won'},
+  {key:'lost',    title:'Lost'},
+];
+let leads = [
+  {name:'Olivia Chen',   course:'AHA BLS Provider',          loc:'Long Beach',         amt:89, src:'paid_ad', age:'2h ago',  stage:'new'},
+  {name:'Marcus Bell',   course:'Heartsaver First Aid',      loc:'Pasadena',           amt:89, src:'organic', age:'5h ago',  stage:'new'},
+  {name:'Priya Nair',    course:'Red Cross First Aid',       loc:'San Francisco',      amt:55, src:'paid_ad', age:'1d ago',  stage:'nudged'},
+  {name:'Diego Ramirez', course:'AHA BLS Provider',          loc:'Los Angeles (DTLA)', amt:89, src:'manual',  age:'2d ago',  stage:'nudged'},
+  {name:'Hannah Park',   course:'Heartsaver First Aid',      loc:'Tempe',              amt:89, src:'organic', age:'5d ago',  stage:'lastchance'},
+  {name:'Tyrone Davis',  course:'AHA ACLS Provider',         loc:'Atlanta',            amt:129,src:'paid_ad', age:'6d ago',  stage:'lastchance'},
+  {name:'Grace Liu',     course:'AHA BLS Provider',          loc:'Long Beach',         amt:89, src:'organic', age:'won',     stage:'won'},
+  {name:'Sam Whitfield',  course:'Red Cross First Aid',      loc:'Indianapolis',       amt:55, src:'paid_ad', age:'won',     stage:'won'},
+  {name:'Kevin Brooks',  course:'Heartsaver First Aid',      loc:'Pasadena',           amt:89, src:'organic', age:'lost',    stage:'lost'},
+];
+
+const srcMeta = {paid_ad:{cls:'src-paid',label:'💰 Paid Ad'}, organic:{cls:'src-organic',label:'🌱 Organic'}, manual:{cls:'src-manual',label:'✋ Manual'}};
+let leadSrcFilter = 'all';
+
+function renderLeads() {
+  const board = document.getElementById('leads-kanban');
+  board.innerHTML = '';
+  const view = leads.filter(l => leadSrcFilter==='all' || l.src===leadSrcFilter);
+
+  LEAD_STAGES.forEach(stage => {
+    const items = view.filter(l => l.stage===stage.key);
+    const col = document.createElement('div'); col.className = 'col';
+    col.innerHTML = '<div class="col-head"><span class="col-title">'+stage.title+'</span><span class="col-count">'+items.length+'</span></div>';
+    const body = document.createElement('div'); body.className = 'col-body';
+    items.forEach(l => body.appendChild(leadCard(l, stage.key)));
+    col.appendChild(body); board.appendChild(col);
+  });
+  // KPIs
+  const pending = leads.filter(l => ['new','nudged','lastchance'].includes(l.stage));
+  const won = leads.filter(l => l.stage==='won');
+  document.getElementById('kpi-pending').textContent = pending.length;
+  document.getElementById('kpi-won').textContent = won.length;
+  const decided = leads.filter(l => ['won','lost'].includes(l.stage)).length;
+  document.getElementById('kpi-conv').textContent = decided ? Math.round(won.length/decided*100)+'%' : '0%';
+  document.getElementById('kpi-risk').textContent = '$' + pending.reduce((s,l)=>s+l.amt,0).toLocaleString();
+}
+
+function leadCard(l, stageKey) {
+  const c = courseTag(l.course);
+  const card = document.createElement('div'); card.className = 'lead-card';
+  let actions = '';
+  if (!['won','lost'].includes(stageKey)) {
+    actions = '<div class="lc-actions">'
+      + '<button class="mini-btn" data-act="next">Next →</button>'
+      + '<button class="mini-btn win" data-act="won">🏆 Won</button>'
+      + '<button class="mini-btn lose" data-act="lost">✕ Lost</button></div>';
+  }
+  card.innerHTML =
+    '<div class="lc-top"><span class="lc-name">'+esc(l.name)+'</span><span class="lc-amt">$'+l.amt+'</span></div>'
+    + '<div class="lc-meta">📍 '+esc(l.loc)+'</div>'
+    + '<div class="lc-tags"><span class="tag '+c.cls+'">'+c.label+'</span><span class="src '+srcMeta[l.src].cls+'">'+srcMeta[l.src].label+'</span></div>'
+    + (['won','lost'].includes(stageKey) ? '' : '<div class="lc-time">⏱ Pay-click '+l.age+'</div>')
+    + actions;
+  card.querySelectorAll('.mini-btn').forEach(b => b.addEventListener('click', () => {
+    const act = b.dataset.act;
+    if (act==='won') l.stage='won';
+    else if (act==='lost') l.stage='lost';
+    else { const order=['new','nudged','lastchance','won']; l.stage = order[Math.min(order.indexOf(l.stage)+1, order.length-1)]; }
+    renderLeads();
+  }));
+  return card;
+}
+
+/* ============================================================
+   5) RENEWALS PIPELINE (kanban) — 90-day cadence + touch strip
+   ============================================================ */
+const RENEWAL_COLS = [
+  {key:90, title:'T-90'}, {key:60, title:'T-60'}, {key:30, title:'T-30'},
+  {key:15, title:'T-15'}, {key:7, title:'T-7'}, {key:0, title:'Day-of'},
+];
+const MILESTONES = [90,60,30,15,7,0];
+// daysLeft = days until cert expiry. touches[] records which milestones fired.
+let renewals = [
+  {name:'Angela Foster', course:'AHA BLS Provider',     loc:'Long Beach',         daysLeft:84, sent:[90]},
+  {name:'Brandon Cole',  course:'Heartsaver First Aid', loc:'Tempe',              daysLeft:58, sent:[90,60]},
+  {name:'Nadia Hassan',  course:'AHA BLS Provider',     loc:'San Francisco',      daysLeft:27, sent:[90,60,30], skipped:[]},
+  {name:'Owen Pierce',   course:'AHA ACLS Provider',    loc:'Atlanta',            daysLeft:13, sent:[90,60,30,15]},
+  {name:'Lucia Mendes',  course:'Red Cross First Aid',  loc:'Los Angeles (DTLA)', daysLeft:5,  sent:[90,60,30,15,7]},
+  {name:'Derek Shaw',    course:'AHA BLS Provider',     loc:'Pasadena',           daysLeft:0,  sent:[90,60,30,15,7]},
+  {name:'Tara Quinn',    course:'Heartsaver First Aid', loc:'Indianapolis',       daysLeft:22, sent:[30], skipped:[90,60]}, // backfill: entered late
+];
+
+function bucketFor(daysLeft) {
+  // assign to the nearest upcoming milestone column
+  for (const m of MILESTONES) { if (daysLeft >= m) return m; }
+  return 0;
+}
+
+function renderRenewals() {
+  const board = document.getElementById('renewals-kanban');
+  board.innerHTML = '';
+  let dueNow = 0;
+  RENEWAL_COLS.forEach(col => {
+    const items = renewals.filter(r => bucketFor(r.daysLeft)===col.key);
+    const c = document.createElement('div'); c.className = 'col';
+    c.innerHTML = '<div class="col-head"><span class="col-title">'+col.title+'</span><span class="col-count">'+items.length+'</span></div>';
+    const body = document.createElement('div'); body.className='col-body';
+    items.forEach(r => { body.appendChild(renewalCard(r)); if (isDue(r)) dueNow++; });
+    c.appendChild(body); board.appendChild(c);
+  });
+  document.getElementById('kpi-renew').textContent = renewals.length;
+  document.getElementById('kpi-renewed').textContent = 4;
+  document.getElementById('kpi-renewrate').textContent = '36%';
+  document.getElementById('kpi-due').textContent = dueNow;
+}
+
+function isDue(r) {
+  const target = bucketFor(r.daysLeft);
+  return !(r.sent||[]).includes(target) && !(r.skipped||[]).includes(target);
+}
+
+function renewalCard(r) {
+  const c = courseTag(r.course);
+  const card = document.createElement('div'); card.className = 'lead-card';
+  // touch strip
+  let strip = '<div class="strip">';
+  MILESTONES.forEach(m => {
+    let st = '';
+    if ((r.sent||[]).includes(m)) st = 'sent';
+    else if ((r.skipped||[]).includes(m)) st = 'skipped';
+    else if (m === bucketFor(r.daysLeft)) st = 'due';
+    strip += '<div class="strip-cell '+(st==='due'?'due':'')+'"><div class="strip-dot '+st+'"></div><div class="strip-lbl">'+(m===0?'0':m)+'</div></div>';
+  });
+  strip += '</div>';
+  const dueLabel = r.daysLeft===0 ? 'expires TODAY' : 'expires in '+r.daysLeft+' days';
+  card.innerHTML =
+    '<div class="lc-top"><span class="lc-name">'+esc(r.name)+'</span></div>'
+    + '<div class="lc-meta">📍 '+esc(r.loc)+'</div>'
+    + '<div class="lc-tags"><span class="tag '+c.cls+'">'+c.label+'</span></div>'
+    + '<div class="lc-time" style="color:'+(r.daysLeft<=7?'var(--amber)':'var(--muted)')+'">🔔 '+dueLabel+(isDue(r)?' · touch due now':'')+'</div>'
+    + strip;
+  return card;
+}
+
+/* ============================================================
+   6) WIRING
+   ============================================================ */
+// nav
+const titles = {
+  schedule:['Schedule','All 12 locations on one clock'],
+  instructors:['Instructor Schedule',"Who's on shift, by day"],
+  locations:['Locations','Certifications sold per location, by month'],
+  analytics:['Analytics','Bookings by cert, location, day & hour'],
+  leads:['Leads','Pending leads moving through follow-up'],
+  renewals:['Renewals','Customers within 90 days of cert expiry'],
+};
+document.querySelectorAll('.nav-item').forEach(btn => btn.addEventListener('click', () => {
+  document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  btn.classList.add('active');
+  const v = btn.dataset.view;
+  document.getElementById('view-'+v).classList.add('active');
+  document.getElementById('page-title').textContent = titles[v][0];
+  document.getElementById('page-sub').textContent = titles[v][1];
+  // the schedule tab brings its own controls; hide the global ones there
+  document.querySelector('.topbar-right').style.display = (v==='schedule'||v==='instructors'||v==='locations'||v==='analytics') ? 'none' : 'flex';
+}));
+// default tab is Schedule -> hide global controls on load
+document.querySelector('.topbar-right').style.display = 'none';
+
+// lead filters
+document.querySelectorAll('[data-leadsrc]').forEach(c => c.addEventListener('click', ()=>{
+  document.querySelectorAll('[data-leadsrc]').forEach(x=>x.classList.remove('active'));
+  c.classList.add('active'); leadSrcFilter = c.dataset.leadsrc; renderLeads();
+}));
+
+// init
+renderLeads();
+renderRenewals();
+</script>
+</body>
+</html>

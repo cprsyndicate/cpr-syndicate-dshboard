@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CPR Syndicate — Master Schedule (all timezones, one clock)</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --purple:#6D3BF5; --purple-2:#7C3AED; --purple-dim:#EEEAFE; --purple-dim-2:#F4F1FF;
+    --bg:#F5F5FA; --card:#FFF; --ink:#1B1B2E; --muted:#8A8A99; --border:#E6E6F0;
+    --green:#16A34A; --green-bg:#F0FDF4; --amber:#D97706; --amber-bg:#FFFBEB; --red:#EF4444; --red-bg:#FEF2F2;
+    /* zone colors */
+    --z-et:#6D3BF5; --z-et-bg:#EEEAFE;
+    --z-ct:#0EA5E9; --z-ct-bg:#E0F2FE;
+    --z-mt:#EA7C1E; --z-mt-bg:#FFF3E6;
+    --z-pt:#16A34A; --z-pt-bg:#E8F8EE;
+  }
+  body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,sans-serif; background:var(--bg); color:var(--ink); }
+  .topbar { background:var(--card); border-bottom:1px solid var(--border); padding:14px 26px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; position:sticky; top:0; z-index:30; }
+  body.embed .brand { display:none; }
+  body.embed .topbar { justify-content:flex-end; padding:12px 22px; }
+  body.embed .wrap { padding-top:14px; }
+  .brand { display:flex; align-items:center; gap:11px; }
+  .logo-icon { width:34px; height:34px; background:linear-gradient(135deg,var(--purple-2),var(--purple)); border-radius:9px; display:flex; align-items:center; justify-content:center; color:#fff; font-size:20px; font-weight:700; }
+  .brand h1 { font-size:17px; font-weight:800; letter-spacing:-.02em; }
+  .brand p { font-size:12px; color:var(--muted); }
+  .controls { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .ctl { display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--muted); font-weight:600; }
+  .select, .num-input {
+    appearance:none; -webkit-appearance:none; background:var(--bg); border:1px solid var(--border);
+    border-radius:9px; padding:7px 11px; font-size:13px; color:var(--ink); font-weight:600; cursor:pointer;
+  }
+  .num-input { width:56px; text-align:center; cursor:text; }
+  .icon-btn { width:32px; height:32px; border-radius:8px; border:1px solid var(--border); background:#fff; cursor:pointer; font-size:14px; color:var(--ink); }
+  .icon-btn:hover { border-color:var(--purple); color:var(--purple); }
+
+  .wrap { padding:18px 26px 60px; }
+  .banner { display:flex; align-items:center; gap:10px; border-radius:12px; padding:11px 16px; font-size:13px; font-weight:500; margin-bottom:16px; }
+  .banner.ok { background:var(--green-bg); color:var(--green); }
+  .banner.warn { background:var(--amber-bg); color:var(--amber); }
+  .banner.err { background:var(--red-bg); color:var(--red); }
+  .banner code { background:rgba(0,0,0,.06); padding:1px 6px; border-radius:5px; font-size:12px; }
+
+  .layout { display:grid; grid-template-columns:1fr 300px; gap:20px; align-items:start; }
+  @media (max-width:980px){ .layout { grid-template-columns:1fr; } }
+
+  .legend { display:flex; gap:16px; flex-wrap:wrap; margin-bottom:14px; }
+  .legend span { font-size:12px; color:var(--muted); display:flex; align-items:center; gap:6px; font-weight:600; }
+  .legend i { width:11px; height:11px; border-radius:3px; display:inline-block; }
+
+  /* timeline */
+  .board { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:0; overflow:hidden; }
+  .board-head { display:grid; grid-template-columns:64px repeat(4,1fr) 70px; border-bottom:1px solid var(--border); background:var(--bg); }
+  .board-head > div { padding:11px 8px; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; text-align:center; color:var(--muted); }
+  .board-head .zhead { border-left:1px solid var(--border); }
+  .board-head .zhead small { display:block; font-weight:600; font-size:9.5px; text-transform:none; letter-spacing:0; margin-top:1px; }
+  .timeline { position:relative; }
+  .tl-grid { display:grid; grid-template-columns:64px repeat(4,1fr) 70px; position:relative; }
+  .tl-axis, .tl-col, .tl-load { position:relative; }
+  .tl-col, .tl-load { border-left:1px solid var(--border); }
+  .hourline { position:absolute; left:0; right:0; border-top:1px solid #F0F0F6; }
+  .hourlbl { position:absolute; left:0; width:64px; text-align:right; padding-right:8px; font-size:11px; color:var(--muted); font-weight:600; transform:translateY(-6px); }
+  .nowline { position:absolute; left:64px; right:0; border-top:2px solid var(--red); z-index:5; }
+  .nowline::before { content:''; position:absolute; left:-4px; top:-5px; width:8px; height:8px; border-radius:50%; background:var(--red); }
+
+  .evt { position:absolute; left:3px; right:3px; border-radius:8px; padding:4px 7px; font-size:10.5px; line-height:1.25; overflow:hidden; border-left:3px solid; cursor:default; }
+  .evt .et-time { font-weight:800; }
+  .evt .who { font-weight:600; }
+  .evt .loc-local { opacity:.72; font-size:9.5px; }
+  .evt.z-et { background:var(--z-et-bg); border-color:var(--z-et); color:#42258f; }
+  .evt.z-ct { background:var(--z-ct-bg); border-color:var(--z-ct); color:#075985; }
+  .evt.z-mt { background:var(--z-mt-bg); border-color:var(--z-mt); color:#9a4d10; }
+  .evt.z-pt { background:var(--z-pt-bg); border-color:var(--z-pt); color:#0f6b34; }
+
+  .loadbadge { position:absolute; left:6px; right:6px; border-radius:7px; text-align:center; font-size:10px; font-weight:800; padding:2px 0; }
+  .load-ok { background:var(--green-bg); color:var(--green); }
+  .load-warn { background:var(--amber-bg); color:var(--amber); }
+  .load-over { background:var(--red-bg); color:var(--red); }
+
+  /* month grid */
+  .mgrid { display:grid; grid-template-columns:repeat(7,1fr); gap:6px; padding:14px; }
+  .mdow { font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); text-align:center; padding:4px 0; }
+  .mcell { background:var(--bg); border:1px solid var(--border); border-radius:10px; min-height:104px; padding:7px; cursor:pointer; display:flex; flex-direction:column; gap:3px; transition:border-color .15s, box-shadow .15s; }
+  .mcell:hover { border-color:var(--purple); box-shadow:0 6px 16px -9px rgba(109,59,245,.55); }
+  .mcell.empty { background:transparent; border:none; cursor:default; }
+  .mcell.today { border-color:var(--purple); box-shadow:0 0 0 1px var(--purple); }
+  .mdate { font-size:12px; font-weight:700; display:flex; justify-content:space-between; align-items:center; }
+  .mcount { font-size:9.5px; font-weight:800; color:#fff; background:var(--purple); border-radius:100px; padding:1px 7px; }
+  .mchip { font-size:9.5px; padding:1px 5px; border-radius:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:600; }
+  .dayback { margin-bottom:10px; }
+
+  /* instructor tags + split summary */
+  .ipill { display:inline-block; color:#fff; font-size:8.5px; font-weight:800; border-radius:4px; padding:0 4px; margin-right:3px; vertical-align:middle; }
+  .ipill.warn { background:var(--red); }
+  .evt.conflict { background:var(--red-bg); border-color:var(--red); color:#991b1b; }
+  .conflict-row { padding:8px 0; border-bottom:1px solid var(--border); }
+  .conflict-row:last-child { border-bottom:none; }
+  .cf-when { font-size:12.5px; font-weight:800; }
+  .cf-who { font-size:11px; color:var(--muted); margin-top:1px; }
+  .cf-fix { font-size:11.5px; color:var(--purple); font-weight:700; margin-top:3px; }
+  .evt.conflict { cursor:pointer; }
+  .evt.conflict::after { content:''; position:absolute; inset:0; border-radius:8px; box-shadow:0 0 0 0 rgba(239,68,68,.5); animation:cfpulse 1.8s ease-out infinite; pointer-events:none; }
+  @keyframes cfpulse { 0%{box-shadow:0 0 0 0 rgba(239,68,68,.45);} 70%{box-shadow:0 0 0 6px rgba(239,68,68,0);} 100%{box-shadow:0 0 0 0 rgba(239,68,68,0);} }
+
+  /* hover popover */
+  #popover { position:fixed; z-index:9999; width:264px; background:var(--card); border:1px solid var(--border); border-radius:14px; box-shadow:0 20px 50px -16px rgba(27,27,46,.5); padding:14px; display:none; pointer-events:none; }
+  #popover.show { display:block; }
+  .po-head { font-size:13.5px; font-weight:800; display:flex; align-items:center; gap:7px; letter-spacing:-.01em; }
+  .po-dot { width:10px; height:10px; border-radius:3px; flex-shrink:0; }
+  .po-sub { color:var(--ink); font-size:13px; font-weight:600; margin-top:5px; }
+  .po-course { color:var(--muted); font-size:11.5px; margin-top:1px; }
+  .po-times { display:flex; gap:8px; margin-top:8px; }
+  .po-time { flex:1; background:var(--bg); border-radius:8px; padding:6px 8px; font-size:11px; color:var(--muted); }
+  .po-time b { display:block; color:var(--ink); font-size:12.5px; font-weight:800; margin-top:1px; }
+  .po-status { margin-top:10px; padding:7px 10px; border-radius:9px; font-weight:700; font-size:12px; }
+  .po-status.ok { background:var(--green-bg); color:var(--green); }
+  .po-status.bad { background:var(--red-bg); color:var(--red); }
+  .po-fix { margin-top:8px; padding:10px; border-radius:10px; background:var(--purple-dim); }
+  .po-fix .lbl { font-size:9.5px; font-weight:800; text-transform:uppercase; letter-spacing:.06em; color:var(--purple); }
+  .po-fix .val { font-size:12.5px; font-weight:700; margin-top:4px; color:var(--ink); line-height:1.4; }
+  .po-opt { font-size:12px; font-weight:700; color:var(--ink); padding:5px 8px; margin-top:5px; background:var(--card); border-radius:7px; }
+  .cf-opt { font-size:11.5px; color:var(--purple); font-weight:700; margin-top:3px; }
+  .cf-more { font-size:10.5px; color:var(--muted); font-weight:600; margin-top:3px; }
+
+  /* day-view conflict banner */
+  #cf-banner { display:none; align-items:center; gap:10px; background:var(--red-bg); color:var(--red); border-radius:12px; padding:11px 16px; font-size:13px; font-weight:700; margin-bottom:12px; }
+  .split-row { display:flex; align-items:center; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border); }
+  .split-row:last-child { border-bottom:none; }
+  .split-name { display:flex; align-items:center; gap:8px; font-size:13px; font-weight:700; }
+  .split-dot { min-width:16px; height:16px; padding:0 4px; border-radius:5px; display:inline-flex; align-items:center; justify-content:center; color:#fff; font-size:9.5px; font-weight:800; }
+  .split-meta { font-size:11.5px; color:var(--muted); font-weight:600; }
+  .split-hint { font-size:12px; color:var(--muted); }
+
+  /* side panel */
+  .panel { display:flex; flex-direction:column; gap:16px; position:sticky; top:84px; }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:16px; }
+  .card h3 { font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin-bottom:12px; }
+  .conv-row { display:flex; gap:8px; margin-bottom:10px; }
+  .conv-row .select, .conv-row .num-input { flex:1; }
+  .conv-out { border-top:1px solid var(--border); padding-top:12px; display:flex; flex-direction:column; gap:7px; }
+  .conv-line { display:flex; justify-content:space-between; align-items:center; font-size:13px; }
+  .conv-line .zn { color:var(--muted); font-weight:600; display:flex; align-items:center; gap:6px; }
+  .conv-line .zn i { width:9px; height:9px; border-radius:3px; }
+  .conv-line .tm { font-weight:800; }
+  .conv-verdict { margin-top:12px; border-radius:10px; padding:10px 12px; font-size:12.5px; font-weight:700; text-align:center; }
+  .kpi { display:flex; justify-content:space-between; align-items:baseline; padding:6px 0; border-bottom:1px solid var(--border); }
+  .kpi:last-child { border-bottom:none; }
+  .kpi .l { font-size:12.5px; color:var(--muted); }
+  .kpi .v { font-size:18px; font-weight:800; }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="logo-icon">+</div>
+    <div><h1>Master Schedule</h1><p>All 12 locations on one clock</p></div>
+  </div>
+  <div class="controls">
+    <span class="ctl">📅
+      <button class="icon-btn" id="day-prev">‹</button>
+      <button class="icon-btn" id="day-today" style="width:auto;padding:0 10px;font-size:12px;font-weight:700;">Today</button>
+      <button class="icon-btn" id="day-next">›</button>
+      <b id="day-label" style="color:var(--ink);margin-left:4px;"></b>
+    </span>
+    <span class="ctl">Clock
+      <select class="select" id="tz-select">
+        <option value="America/New_York">Eastern</option>
+        <option value="America/Chicago">Central</option>
+        <option value="America/Denver">Mountain</option>
+        <option value="America/Los_Angeles">Pacific</option>
+        <option value="local">My local</option>
+      </select>
+    </span>
+    <span class="ctl">Instructors <b id="shift-label" style="color:var(--ink)"></b></span>
+  </div>
+</header>
+
+<div class="wrap">
+  <div id="banner"></div>
+  <div class="legend">
+    <span><i style="background:var(--z-et)"></i> Eastern</span>
+    <span><i style="background:var(--z-ct)"></i> Central</span>
+    <span><i style="background:var(--z-mt)"></i> Mountain (AZ)</span>
+    <span><i style="background:var(--z-pt)"></i> Pacific</span>
+    <span style="margin-left:auto">Right rail = sessions running at once vs instructor capacity (10 / instructor)</span>
+  </div>
+
+  <div class="layout">
+    <div style="min-width:0;">
+      <div class="dayback" id="dayback" style="display:none;">
+        <button class="icon-btn" id="btn-back" style="width:auto;padding:0 13px;font-size:12px;font-weight:700;">‹ Back to month</button>
+      </div>
+      <div id="cf-banner"></div>
+      <!-- MONTH -->
+      <div class="board" id="month-board"><div class="mgrid" id="mgrid"></div></div>
+      <!-- DAY (zoomed in) -->
+      <div class="board" id="day-board" style="display:none;">
+        <div class="board-head" id="board-head"></div>
+        <div class="timeline"><div class="tl-grid" id="tl-grid"></div></div>
+      </div>
+    </div>
+
+    <aside class="panel">
+      <div class="card">
+        <h3>🕐 Timezone converter</h3>
+        <div class="conv-row">
+          <select class="select" id="conv-loc"></select>
+          <input class="num-input" id="conv-time" type="time" value="09:00" style="width:auto;">
+        </div>
+        <div class="conv-out" id="conv-out"></div>
+        <div class="conv-verdict" id="conv-verdict"></div>
+      </div>
+      <div class="card">
+        <h3>⚠️ <span id="conflict-title">Conflicts</span></h3>
+        <div id="conflict-body"></div>
+      </div>
+      <div class="card">
+        <h3>👥 Instructor split</h3>
+        <div id="split-body"></div>
+      </div>
+      <div class="card">
+        <h3>📊 <span id="stats-title">This month</span></h3>
+        <div class="kpi"><span class="l">Total sessions</span><span class="v" id="k-total">0</span></div>
+        <div class="kpi"><span class="l">Peak concurrent</span><span class="v" id="k-peak">0</span></div>
+        <div class="kpi"><span class="l">Instructor capacity</span><span class="v" id="k-cap">30</span></div>
+        <div class="kpi"><span class="l">Over capacity?</span><span class="v" id="k-over" style="color:var(--green)">No</span></div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   CONFIG — paste your Google Calendar credentials.
+   Leave blank to run on demo data built from your screenshot.
+   - GCAL_ID:  your single booking calendar's ID (…@group.calendar.google.com),
+               and the calendar must be public.
+   - API_KEY:  a Google Calendar API key (console.cloud.google.com).
+   ============================================================ */
+const CONFIG = {
+  GCAL_API_KEY: 'AIzaSyC_TFebAKiiw97ZRl3pjA75pC9vt-23r7Y',
+  GCAL_ID: 'cprsyndicate@gmail.com',
+  DAY_START: 8,    // first hour shown (in the selected display clock)
+  DAY_END: 24,     // last hour shown
+  PER_INSTRUCTOR: 10,  // locations one instructor can cover at once
+};
+
+/* location -> IANA timezone (Arizona = no DST) */
+const LOC_TZ = {
+  'Tempe':'America/Phoenix',
+  'Long Beach':'America/Los_Angeles','DTLA':'America/Los_Angeles','Los Angeles (DTLA)':'America/Los_Angeles',
+  'San Francisco':'America/Los_Angeles','Pasadena':'America/Los_Angeles',
+  'Houston':'America/Chicago',
+  'Manhattan':'America/New_York','Columbus':'America/New_York','Atlanta':'America/New_York',
+  'Indianapolis':'America/New_York','Philadelphia':'America/New_York','Virginia Beach':'America/New_York',
+};
+const LOCATIONS = Object.keys(LOC_TZ).filter(l => l!=='DTLA');
+
+function zoneOf(tz){
+  if (tz==='America/New_York') return 'et';
+  if (tz==='America/Chicago') return 'ct';
+  if (tz==='America/Phoenix') return 'mt';
+  return 'pt';
+}
+const ZONE_COL = { et:1, ct:2, mt:3, pt:4 };  // grid column index (after axis)
+
+/* course -> duration (min). BLS & Heartsaver 60, Red Cross First Aid 90 */
+function courseDuration(text=''){
+  const t = text.toLowerCase();
+  if (t.includes('red cross') || /\bfirst aid\b/.test(t) || /·\s*r/.test(t) || t.includes('rcfa') || t.includes('arc')) return 90;
+  return 60;
+}
+
+/* ---- parse a Google event title "Location — Student · Course" ---- */
+function parseTitle(summary=''){
+  // split location off the front at — or - (with spaces)
+  const m = summary.match(/^\s*(.+?)\s*[—–-]\s*(.*)$/);
+  let location = summary.trim(), rest = '';
+  if (m){ location = m[1].trim(); rest = m[2].trim(); }
+  // course = the recognizable course phrase anywhere in the rest (handles
+  // both "Student · Course" and all-hyphen "Student - Course" titles)
+  const cm = rest.match(/(red cross[^·\-—]*|heartsaver[^·\-—]*|bls[^·\-—]*|acls[^·\-—]*|pals[^·\-—]*|first aid[^·\-—]*)/i);
+  let course = cm ? cm[0].trim() : '';
+  // student = whatever's before the course (or before the first · / - separator)
+  let student = rest;
+  if (cm) student = rest.slice(0, cm.index).replace(/[·\-—\s]+$/,'').trim();
+  else { const dot = rest.split(/\s*·\s*/); if (dot.length>1){ student = dot[0].trim(); course = dot.slice(1).join(' · ').trim(); } }
+  return { location, student, course };
+}
+
+/* ============================================================
+   DATA
+   ============================================================ */
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+let refDay = new Date(); // current month/day; live data fills it in
+let viewMode = 'month';  // 'month' (default) or 'day' (zoomed in)
+let events = [];         // events shown in the current view
+let weekEvents = [];     // current day + next 6 days, for cross-day reschedule options
+
+async function fetchEvents(dayStart, dayEnd){
+  if (!CONFIG.GCAL_API_KEY || !CONFIG.GCAL_ID) return { ok:false, reason:'unconfigured' };
+  const url = 'https://www.googleapis.com/calendar/v3/calendars/'+encodeURIComponent(CONFIG.GCAL_ID)+'/events'
+    +'?key='+CONFIG.GCAL_API_KEY+'&singleEvents=true&orderBy=startTime&maxResults=2500'
+    +'&timeMin='+encodeURIComponent(dayStart.toISOString())+'&timeMax='+encodeURIComponent(dayEnd.toISOString());
+  try {
+    const res = await fetch(url);
+    if (!res.ok){ const b = await res.json().catch(()=>({})); return {ok:false, reason:(b.error&&b.error.message)||('HTTP '+res.status)}; }
+    const data = await res.json();
+    const evs = (data.items||[]).filter(e=>e.start&&e.start.dateTime).map(e=>{
+      const p = parseTitle(e.summary||'');
+      const tz = LOC_TZ[p.location] || 'America/New_York';
+      const start = new Date(e.start.dateTime);
+      const end = e.end&&e.end.dateTime ? new Date(e.end.dateTime) : new Date(start.getTime()+courseDuration(p.course)*60000);
+      return { start, end, location:p.location, student:p.student, course:p.course, tz, zone:zoneOf(tz) };
+    });
+    return { ok:true, events:evs };
+  } catch(err){ return {ok:false, reason:err.message}; }
+}
+
+/* demo events transcribed from the screenshot (times shown are Eastern) */
+function demoEvents(){
+  const raw = [
+    ['11:30','Columbus','Hien Watkins','Red Cross First Aid'],
+    ['12:00','Manhattan','Dalilah Gonzalez','BLS Provider'],
+    ['12:00','Tempe','James Jessup','Red Cross First Aid'],
+    ['12:30','Houston','Sayuri Rodriguez','Red Cross First Aid'],
+    ['14:00','Columbus','Hien Watkins','Red Cross First Aid'],
+    ['14:30','San Francisco','Belcim Aydin','Red Cross First Aid'],
+    ['14:30','Tempe','Lucia Lucero','Red Cross First Aid'],
+    ['14:30','Tempe','Marlyn Quinones','Red Cross First Aid'],
+    ['15:00','Columbus','Yazmin Loewy','Red Cross First Aid'],
+    ['16:00','Houston','Gail Jackson','Red Cross First Aid'],
+    ['16:00','Houston','Thomas Jackson','BLS Provider'],
+    ['17:00','San Francisco','Neil Vexler','Red Cross First Aid'],
+    ['19:30','Tempe',"D'Andre Graham",'Red Cross First Aid'],
+    ['21:00','Pasadena','Arthur Yanikyan','BLS Provider'],
+    ['21:00','Pasadena','Syuzan Yanikyan','Heartsaver'],
+    ['22:00','San Francisco','Helena Gold','Red Cross First Aid'],
+  ];
+  return raw.map(([hm,loc,stu,course])=>{
+    const start = new Date('2026-06-04T'+hm+':00-04:00');  // treat shown time as Eastern instant
+    const tz = LOC_TZ[loc] || 'America/New_York';
+    return { start, end:new Date(start.getTime()+courseDuration(course)*60000), location:loc, student:stu, course, tz, zone:zoneOf(tz) };
+  });
+}
+
+/* ============================================================
+   TIME HELPERS — display any instant in the chosen clock
+   ============================================================ */
+function displayTz(){ const v = document.getElementById('tz-select').value; return v==='local' ? Intl.DateTimeFormat().resolvedOptions().timeZone : v; }
+function minutesInTz(date, tz){
+  const p = new Intl.DateTimeFormat('en-US',{timeZone:tz,hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(date);
+  const h = +p.find(x=>x.type==='hour').value, m = +p.find(x=>x.type==='minute').value;
+  return (h===24?0:h)*60 + m;
+}
+function fmtInTz(date, tz){
+  return new Intl.DateTimeFormat('en-US',{timeZone:tz,hour:'numeric',minute:'2-digit',hour12:true}).format(date).replace(':00','').toLowerCase().replace(' ','');
+}
+
+const PX_PER_MIN = 1.15;
+
+/* ---- INSTRUCTOR ROSTER ----
+   Each instructor teaches ONE session at a time. `windows` are Eastern-time
+   hour ranges [from,to) when they're on shift. Edit names/hours/people here. */
+const INSTRUCTORS = [
+  { name:'Marcel Manansala', initials:'MMM', color:'#6D3BF5', windows:[[9,15]] },   // 9a–3p ET
+  { name:'Mariel Manansala', initials:'MM',  color:'#DB2777', windows:[[9,15]] },   // 9a–3p ET
+  { name:'Marcela Luna',     initials:'ML',  color:'#0D9488', windows:[[15,23]] },  // 3p–11p ET (M–F)
+  { name:'Reimund Sagansay', initials:'RS',  color:'#CA8A04', windows:[[17,23]] },  // 5p–11p ET (Sun–Thu)
+  { name:'Diego Ramirez',    initials:'DR',  color:'#2563EB', windows:[[16,24]] },  // 1p–9p PST = 4p–12a ET (placeholder)
+];
+function fmtH(h){ const ap=h>=12?'p':'a'; return (h%12||12)+ap; }
+function etHourOf(date){ return minutesInTz(date,'America/New_York')/60; }
+function isAvailable(instr, etH){ return instr.windows.some(w=> etH>=w[0] && etH<w[1]); }
+function instructorsAtETHour(h){ return INSTRUCTORS.filter(i=>isAvailable(i,h)).length; }
+function instructorsAt(date){ return instructorsAtETHour(etHourOf(date)); }
+function maxInstructors(){ let m=0; for(let h=0;h<24;h++) m=Math.max(m,instructorsAtETHour(h)); return m; }
+function minInstructors(){ let m=Infinity; for(let h=0;h<24;h++){ const n=instructorsAtETHour(h); if(n>0) m=Math.min(m,n); } return m===Infinity?0:m; }
+function shiftsLabel(){
+  const g={}; INSTRUCTORS.forEach(i=>i.windows.forEach(w=>{ const k=w[0]+'-'+w[1]; g[k]=(g[k]||0)+1; }));
+  return Object.entries(g).map(([k,n])=>{ const [a,b]=k.split('-'); return n+' ('+fmtH(+a)+'–'+fmtH(+b)+' ET)'; }).join(' · ');
+}
+
+/* one-session-at-a-time, shift-aware assignment.
+   Each session -> a free instructor on shift at its start. None free -> conflict (-1). */
+function assignInstructors(evs){
+  const sorted = [...evs].sort((a,b)=> a.start-b.start || a.end-b.end);
+  const assign = new Map();
+  const busy = INSTRUCTORS.map(()=>[]);            // [start,end] intervals per instructor
+  sorted.forEach(ev=>{
+    const etH = etHourOf(ev.start);
+    let chosen = -1;
+    for(let i=0;i<INSTRUCTORS.length;i++){
+      if(!isAvailable(INSTRUCTORS[i], etH)) continue;
+      if(busy[i].some(([s,e])=> s<ev.end && e>ev.start)) continue;   // already teaching then
+      chosen = i; break;
+    }
+    if(chosen>=0) busy[chosen].push([ev.start, ev.end]);
+    assign.set(ev, chosen);
+  });
+  return { assign, busy };
+}
+/* standard daily slots per course (LOCAL hours, from the M–F template).
+   Classes can't mix, so a reschedule must land on a slot of the SAME course. */
+const COURSE_SLOTS = {
+  bls:        [9, 10, 18],          // 9a · 10a · 6p
+  heartsaver: [17],                 // 5p
+  rcfa:       [11.5, 14, 16.5, 19], // 11:30a · 2p · 4:30p · 7p
+};
+function courseKey(text=''){
+  const t = text.toLowerCase();
+  if (t.includes('bls')) return 'bls';
+  if (t.includes('heartsaver')) return 'heartsaver';
+  if (t.includes('red cross') || /first aid/.test(t) || t.includes('rcfa') || /·\s*r/.test(t)) return 'rcfa';
+  return null;
+}
+function courseLabel(text=''){ return ({bls:'BLS',heartsaver:'Heartsaver',rcfa:'Red Cross FA'})[courseKey(text)] || 'class'; }
+
+/* a SAME-COURSE slot instant on a given day offset, in the location's tz */
+function localSlotInstant(dayOff, min, tz){
+  const base = new Date(refDay); base.setDate(base.getDate()+dayOff);
+  const d={}; new Intl.DateTimeFormat('en-CA',{timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(base).forEach(p=>d[p.type]=p.value);
+  const utcGuess = Date.UTC(+d.year, +d.month-1, +d.day, Math.floor(min/60), min%60);
+  const off = tzOffsetMinutes(new Date(utcGuess), tz);
+  return new Date(utcGuess - off*60000);
+}
+/* up to `max` reschedule options: same-course slots, instructor free, today + next 6 days */
+function suggestSlots(ev, busy, max=5){
+  const slots = COURSE_SLOTS[courseKey(ev.course)] || [];
+  const dur = ev.end - ev.start, locTz = ev.tz;
+  const out = [];
+  for(let dayOff=0; dayOff<7 && out.length<max; dayOff++){
+    const curLocalMin = dayOff===0 ? minutesInTz(ev.start, locTz) : -1;
+    const mins = slots.map(h=>Math.round(h*60)).filter(m=> dayOff>0 || m>curLocalMin).sort((a,b)=>a-b);
+    for(const m of mins){
+      if(out.length>=max) break;
+      const ns = localSlotInstant(dayOff, m, locTz), ne = new Date(ns.getTime()+dur);
+      const etH = etHourOf(ns);
+      for(let i=0;i<INSTRUCTORS.length;i++){
+        if(!isAvailable(INSTRUCTORS[i], etH)) continue;
+        if(busy[i].some(([s,e])=> s<ne && e>ns)) continue;
+        out.push({ time:ns, instr:i, dayOff }); break;
+      }
+    }
+  }
+  return out;
+}
+function optLabel(o, tz){
+  const day = o.dayOff===0 ? 'Today' : new Intl.DateTimeFormat('en-US',{timeZone:tz,weekday:'short',month:'numeric',day:'numeric'}).format(o.time);
+  return day+' · '+fmtInTz(o.time,tz)+' · '+esc(INSTRUCTORS[o.instr].name);
+}
+function renderSplit(assign, evs){
+  const body = document.getElementById('split-body');
+  let rows = '';
+  INSTRUCTORS.forEach((ins,i)=>{
+    const count = evs.filter(e=> assign.get(e)===i).length;
+    const wins = ins.windows.map(w=>fmtH(w[0])+'–'+fmtH(w[1])).join(', ');
+    rows += '<div class="split-row"><span class="split-name"><span class="split-dot" style="background:'+ins.color+'">'+ins.initials+'</span>'+esc(ins.name)+'</span>'
+         + '<span class="split-meta">'+count+' sessions</span></div>'
+         + '<div class="split-hint" style="margin:-4px 0 6px 24px">on '+wins+' ET</div>';
+  });
+  body.innerHTML = rows;
+}
+function renderConflicts(conflicts, busy, tz){
+  const body = document.getElementById('conflict-body');
+  document.getElementById('conflict-title').textContent = 'Conflicts ('+conflicts.length+')';
+  if(!conflicts.length){ body.innerHTML='<div class="split-hint" style="color:var(--green);font-weight:700">✓ No overlaps — everyone fits.</div>'; return; }
+  body.innerHTML = conflicts.slice().sort((a,b)=>a.start-b.start).map(ev=>{
+    const opts = suggestSlots(ev, busy);
+    let fix;
+    if(opts.length){
+      fix = opts.slice(0,3).map(o=>'<div class="cf-opt">→ '+optLabel(o,tz)+'</div>').join('')
+          + (opts.length>3 ? '<div class="cf-more">+'+(opts.length-3)+' more — hover the session</div>' : '');
+    } else fix = '<div class="cf-opt">No same-course slot in the next 7 days.</div>';
+    return '<div class="conflict-row"><div class="cf-when">'+fmtInTz(ev.start,tz)+' · '+esc(ev.location)+'</div>'
+         + '<div class="cf-who">'+esc(ev.student||'')+' · '+esc(ev.course||'')+'</div>'
+         + fix+'</div>';
+  }).join('');
+}
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+async function load(){
+  let timeMin, timeMax, scope;
+  if (viewMode==='month'){
+    const y=refDay.getFullYear(), m=refDay.getMonth();
+    timeMin=new Date(y,m,1); timeMax=new Date(y,m+1,1); scope='this month';
+  } else {
+    // fetch a 7-day window so reschedule options can check future-day availability
+    timeMin=new Date(refDay); timeMin.setHours(0,0,0,0);
+    timeMax=new Date(timeMin); timeMax.setDate(timeMax.getDate()+7); scope='this day';
+  }
+  const banner = document.getElementById('banner');
+  const res = await fetchEvents(timeMin, timeMax);
+  let all, cls, msg;
+  if (res.ok){ all = res.events; cls='banner ok'; }
+  else if (res.reason==='unconfigured'){ all = demoEvents(); cls='banner warn'; msg='⚠️ <b>Demo data</b>. Paste your <code>GCAL_API_KEY</code> + <code>GCAL_ID</code> in the CONFIG block to go live.'; }
+  else { all = demoEvents(); cls='banner err'; msg='🔴 Google Calendar error ('+res.reason+'). Showing demo data.'; }
+
+  if (viewMode==='day'){
+    weekEvents = all;
+    // show exactly the events that the clicked month-cell groups (same day in the display clock)
+    const key = refDay.getFullYear()+'-'+String(refDay.getMonth()+1).padStart(2,'0')+'-'+String(refDay.getDate()).padStart(2,'0');
+    events = all.filter(e=> dayKeyInTz(e.start, displayTz())===key);
+  } else { events = all; weekEvents = []; }
+
+  banner.className = cls;
+  banner.innerHTML = res.ok ? '🟢 Live — '+events.length+' sessions pulled from Google Calendar for '+scope+'.' : msg;
+  rerender();
+}
+function rerender(){ viewMode==='month' ? renderMonth() : render(); }
+
+function dayKeyInTz(date, tz){
+  const p={}; new Intl.DateTimeFormat('en-CA',{timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(date).forEach(x=>p[x.type]=x.value);
+  return p.year+'-'+p.month+'-'+p.day;
+}
+
+function renderMonth(){
+  const tz = displayTz();
+  const y=refDay.getFullYear(), m=refDay.getMonth();
+  document.getElementById('day-label').textContent = MONTHS[m]+' '+y;
+  document.getElementById('month-board').style.display='';
+  document.getElementById('day-board').style.display='none';
+  document.getElementById('dayback').style.display='none';
+  document.getElementById('cf-banner').style.display='none';
+  hidePopover();
+  document.getElementById('stats-title').textContent='This month';
+  document.getElementById('split-body').innerHTML='<div class="split-hint">Open a day to see how to split it across instructors.</div>';
+  const { assign:mAssign } = assignInstructors(events);
+  const conflictByDay = {};
+  events.forEach(e=>{ if(mAssign.get(e)<0){ const k=dayKeyInTz(e.start,tz); conflictByDay[k]=(conflictByDay[k]||0)+1; } });
+  const mConflicts = events.filter(e=>mAssign.get(e)<0).length;
+  document.getElementById('conflict-title').textContent='Conflicts ('+mConflicts+')';
+  document.getElementById('conflict-body').innerHTML = mConflicts
+    ? '<div class="split-hint" style="color:var(--red);font-weight:700">'+mConflicts+' overlaps this month. Open a flagged day (🔴) for fixes.</div>'
+    : '<div class="split-hint" style="color:var(--green);font-weight:700">✓ No overlaps this month.</div>';
+
+  const grid=document.getElementById('mgrid'); grid.innerHTML='';
+  ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(d=>{ const e=document.createElement('div'); e.className='mdow'; e.textContent=d; grid.appendChild(e); });
+  const firstDow=new Date(y,m,1).getDay(), dim=new Date(y,m+1,0).getDate();
+  const byDay={}; events.forEach(ev=>{ const k=dayKeyInTz(ev.start,tz); (byDay[k]=byDay[k]||[]).push(ev); });
+  const today=new Date();
+  for(let i=0;i<firstDow;i++){ const e=document.createElement('div'); e.className='mcell empty'; grid.appendChild(e); }
+  for(let day=1; day<=dim; day++){
+    const key=y+'-'+String(m+1).padStart(2,'0')+'-'+String(day).padStart(2,'0');
+    const list=(byDay[key]||[]).sort((a,b)=>a.start-b.start);
+    const cell=document.createElement('div');
+    cell.className='mcell'+(today.getFullYear()===y&&today.getMonth()===m&&today.getDate()===day?' today':'');
+    cell.dataset.day=day;
+    const cf=conflictByDay[key]||0;
+    let html='<div class="mdate"><span>'+day+'</span><span>'+(cf?'<span class="mcount" style="background:var(--red)">🔴 '+cf+'</span> ':'')+(list.length?'<span class="mcount">'+list.length+'</span>':'')+'</span></div>';
+    list.slice(0,3).forEach(ev=>{ html+='<div class="mchip" style="background:var(--z-'+ev.zone+'-bg);color:var(--z-'+ev.zone+')">'+fmtInTz(ev.start,tz)+' '+esc(ev.location)+'</div>'; });
+    if(list.length>3) html+='<div class="mchip" style="color:var(--muted)">+'+(list.length-3)+' more</div>';
+    cell.innerHTML=html; grid.appendChild(cell);
+  }
+
+  document.getElementById('k-total').textContent=events.length;
+  let peak=0; events.forEach(e=>{ const n=events.filter(x=>x.start<e.end&&x.end>e.start).length; if(n>peak)peak=n; });
+  document.getElementById('k-peak').textContent=peak; document.getElementById('k-cap').textContent=minInstructors()+'–'+maxInstructors();
+  const ko=document.getElementById('k-over'); ko.textContent=mConflicts?('Yes — '+mConflicts):'No'; ko.style.color=mConflicts?'var(--red)':'var(--green)';
+  renderConverter();
+}
+
+function render(){
+  const tz = displayTz();
+  document.getElementById('month-board').style.display='none';
+  document.getElementById('day-board').style.display='';
+  document.getElementById('dayback').style.display='';
+  document.getElementById('stats-title').textContent='This day';
+  document.getElementById('day-label').textContent = refDay.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+  const { assign, busy } = assignInstructors(weekEvents.length ? weekEvents : events);
+  const startMin = CONFIG.DAY_START*60, endMin = CONFIG.DAY_END*60;
+  // capacity varies by shift; map a display-clock minute back to ET hour for that day
+  const refNoon = new Date(refDay); refNoon.setHours(12,0,0,0);
+  const offDispET = minutesInTz(refNoon, tz) - minutesInTz(refNoon, 'America/New_York');
+  const capAt = t => { let etMin=(((t-offDispET)%1440)+1440)%1440; return instructorsAtETHour(etMin/60); };
+  const height = (endMin-startMin)*PX_PER_MIN;
+
+  // header
+  const zlabels = [['Eastern','et'],['Central','ct'],['Mountain · AZ','mt'],['Pacific','pt']];
+  document.getElementById('board-head').innerHTML =
+    '<div>'+ (tzShort(tz)) +'</div>' +
+    zlabels.map(([n])=>'<div class="zhead">'+n+'</div>').join('') +
+    '<div class="zhead">Load</div>';
+
+  const grid = document.getElementById('tl-grid');
+  grid.innerHTML = '';
+  grid.style.height = height+'px';
+
+  // axis + hour lines
+  const axis = document.createElement('div'); axis.className='tl-axis';
+  for (let h=CONFIG.DAY_START; h<=CONFIG.DAY_END; h++){
+    const top = (h*60-startMin)*PX_PER_MIN;
+    const lbl = document.createElement('div'); lbl.className='hourlbl'; lbl.style.top=top+'px';
+    lbl.textContent = (h%12||12)+(h<12||h===24?'a':'p'); axis.appendChild(lbl);
+  }
+  grid.appendChild(axis);
+
+  // 4 zone columns
+  const cols = {};
+  ['et','ct','mt','pt'].forEach(z=>{ const c=document.createElement('div'); c.className='tl-col'; cols[z]=c; grid.appendChild(c); });
+  // hour gridlines across columns
+  for (let h=CONFIG.DAY_START; h<=CONFIG.DAY_END; h++){
+    const top=(h*60-startMin)*PX_PER_MIN;
+    const line=document.createElement('div'); line.className='hourline'; line.style.top=top+'px'; line.style.left='64px'; line.style.right='0'; grid.appendChild(line);
+  }
+
+  // pack overlapping events in each zone into side-by-side lanes
+  const byZone={et:[],ct:[],mt:[],pt:[]};
+  events.forEach(e=> byZone[e.zone].push(e));
+  const packMap=new Map();
+  Object.values(byZone).forEach(list=> packZone(list).forEach((v,k)=> packMap.set(k,v)));
+
+  // place events
+  events.forEach(ev=>{
+    const m = minutesInTz(ev.start, tz);
+    const durMin = (ev.end-ev.start)/60000;
+    const top = (m-startMin)*PX_PER_MIN;
+    const ii = assign.get(ev);
+    const conflict = ii < 0;
+    const pill = conflict ? '<span class="ipill warn">!</span>'
+                          : '<span class="ipill" style="background:'+INSTRUCTORS[ii].color+'">'+INSTRUCTORS[ii].initials+'</span>';
+    const el = document.createElement('div'); el.className='evt z-'+ev.zone+(conflict?' conflict':'');
+    const pk = packMap.get(ev) || {lane:0,lanes:1};
+    el.style.left='calc('+(pk.lane/pk.lanes*100)+'% + 2px)';
+    el.style.width='calc('+(100/pk.lanes)+'% - 4px)';
+    el.style.right='auto';
+    el.style.top=top+'px'; el.style.height=Math.max(26,durMin*PX_PER_MIN-3)+'px';
+    el.innerHTML = '<div class="et-time">'+pill+fmtInTz(ev.start,tz)+' · '+esc(ev.location)+'</div>'
+      + '<div class="who">'+esc(ev.student||'')+'</div>'
+      + '<div class="loc-local">'+esc(ev.course||'')+' · '+fmtInTz(ev.start,ev.tz)+' local</div>';
+    const opts = conflict ? suggestSlots(ev, busy) : null;
+    el.addEventListener('mouseenter', ()=> showPopover(el, ev, ii, opts, tz));
+    el.addEventListener('mouseleave', hidePopover);
+    cols[ev.zone].appendChild(el);
+  });
+
+  // load rail — concurrency per 15 min vs the instructors on shift then
+  const load = document.createElement('div'); load.className='tl-load';
+  const minCap = minInstructors(), maxCap = maxInstructors();
+  document.getElementById('k-cap').textContent = minCap+'–'+maxCap;
+  const disp = events.map(ev=>{ const s=minutesInTz(ev.start,tz); return {s, e:s+(ev.end-ev.start)/60000}; });
+  let peak = 0, over = false;
+  for (let t=startMin; t<endMin; t+=15){
+    const n = disp.filter(d=> d.s < t+15 && d.e > t).length;
+    const cap = capAt(t) || maxCap;
+    if (n>peak) peak=n;
+    if (n>cap) over = true;
+    if (n>0){
+      const cls = n>cap ? 'load-over' : (n>cap*0.7 ? 'load-warn' : 'load-ok');
+      const b=document.createElement('div'); b.className='loadbadge '+cls;
+      b.style.top=((t-startMin)*PX_PER_MIN)+'px'; b.style.height=(15*PX_PER_MIN-2)+'px';
+      b.style.lineHeight=(15*PX_PER_MIN-2)+'px'; b.textContent=n;
+      load.appendChild(b);
+    }
+  }
+  grid.appendChild(load);
+
+  // KPIs
+  const conflicts = events.filter(e=> assign.get(e) < 0);
+  const cfb = document.getElementById('cf-banner');
+  if(conflicts.length){ cfb.style.display='flex'; cfb.innerHTML='⚠️ '+conflicts.length+' scheduling conflict'+(conflicts.length>1?'s':'')+' today — hover a red session for the fix.'; }
+  else { cfb.style.display='none'; }
+  document.getElementById('k-total').textContent = events.length;
+  document.getElementById('k-peak').textContent = peak;
+  const ko = document.getElementById('k-over'); ko.textContent = conflicts.length?('Yes — '+conflicts.length):'No'; ko.style.color = conflicts.length?'var(--red)':'var(--green)';
+
+  renderConflicts(conflicts, busy, tz);
+  renderSplit(assign, events);
+  renderConverter();
+}
+
+function displayMinToInstant(min, tz){
+  // build an instant on refDay at `min` minutes in tz — approximate via offset from a known event is complex;
+  // simpler: use the event-overlap test in absolute terms by mapping the window using the same tz formatting.
+  // We construct a Date for the day at given local (display-tz) minutes.
+  const y=refDay.getFullYear();
+  const base = new Date(refDay); base.setHours(0,0,0,0);
+  // find the UTC instant whose tz-local minutes == min, by iterating offset guess
+  // cheap robust approach: probe midnight in tz, then add minutes.
+  const midnightLocalMin = minutesInTz(base, tz); // minutes of `base` shown in tz
+  const deltaToMidnight = ((0 - midnightLocalMin)+1440)%1440;
+  return new Date(base.getTime() + (deltaToMidnight+min)*60000);
+}
+
+function tzShort(tz){
+  return ({'America/New_York':'Eastern','America/Chicago':'Central','America/Denver':'Mountain','America/Los_Angeles':'Pacific'})[tz] || 'Local';
+}
+
+/* ---- hover popover (details + conflict solution) ---- */
+const popoverEl = document.createElement('div'); popoverEl.id='popover'; document.body.appendChild(popoverEl);
+function hidePopover(){ popoverEl.classList.remove('show'); }
+function showPopover(el, ev, ii, opts, tz){
+  const conflict = ii < 0;
+  let html = '<div class="po-head"><span class="po-dot" style="background:var(--z-'+ev.zone+')"></span>'+fmtInTz(ev.start,tz)+' · '+esc(ev.location)+'</div>'
+    + '<div class="po-sub">'+esc(ev.student||'—')+'</div>'
+    + '<div class="po-course">'+(esc(ev.course)||courseLabel(ev.course))+'</div>'
+    + '<div class="po-times"><div class="po-time">Local<b>'+fmtInTz(ev.start,ev.tz)+'</b></div><div class="po-time">'+tzShort(tz)+'<b>'+fmtInTz(ev.start,tz)+'</b></div></div>';
+  if(conflict){
+    html += '<div class="po-status bad">⚠️ Conflict — all instructors busy</div>';
+    if(opts && opts.length){
+      html += '<div class="po-fix"><div class="lbl">Reschedule options ('+opts.length+') · '+courseLabel(ev.course)+'</div>'
+        + opts.map(o=>'<div class="po-opt">'+optLabel(o,tz)+'</div>').join('')
+        + '</div>';
+    } else {
+      html += '<div class="po-fix"><div class="lbl">Reschedule options</div><div class="val">No same-course slot in the next 7 days.</div></div>';
+    }
+  } else {
+    html += '<div class="po-status ok">✓ Assigned to '+esc(INSTRUCTORS[ii].name)+' ('+INSTRUCTORS[ii].initials+')</div>';
+  }
+  popoverEl.innerHTML = html;
+  popoverEl.classList.add('show');
+  const r = el.getBoundingClientRect();
+  let x = r.right + 10, y = r.top;
+  if (x + 276 > window.innerWidth) x = r.left - 276;
+  if (x < 8) x = 8;
+  if (y + popoverEl.offsetHeight + 8 > window.innerHeight) y = window.innerHeight - popoverEl.offsetHeight - 8;
+  if (y < 8) y = 8;
+  popoverEl.style.left = x+'px'; popoverEl.style.top = y+'px';
+}
+function esc(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+/* lay overlapping events in a zone side-by-side: returns Map ev -> {lane, lanes} */
+function packZone(evs){
+  const sorted = evs.slice().sort((a,b)=> a.start-b.start || a.end-b.end);
+  const result = new Map();
+  let cluster=[], clusterEnd=-Infinity;
+  const flush=()=>{
+    if(!cluster.length) return;
+    const laneEnds=[];
+    cluster.forEach(ev=>{
+      let i=0; while(i<laneEnds.length && laneEnds[i] > ev.start) i++;
+      laneEnds[i]=ev.end; ev.__lane=i;
+    });
+    const n=laneEnds.length;
+    cluster.forEach(ev=> result.set(ev,{lane:ev.__lane, lanes:n}));
+    cluster=[]; clusterEnd=-Infinity;
+  };
+  sorted.forEach(ev=>{
+    if(cluster.length && ev.start >= clusterEnd) flush();
+    cluster.push(ev); clusterEnd=Math.max(clusterEnd, ev.end);
+  });
+  flush();
+  return result;
+}
+
+/* ---- converter ---- */
+function renderConverter(){
+  const loc = document.getElementById('conv-loc').value;
+  const hm = document.getElementById('conv-time').value || '09:00';
+  const srcTz = LOC_TZ[loc] || 'America/New_York';
+  // build the instant for `hm` local at srcTz on refDay
+  const [h,mi] = hm.split(':').map(Number);
+  const instant = localTimeToInstant(h*60+mi, srcTz);
+  const zones = [['Eastern','America/New_York','et'],['Central','America/Chicago','ct'],['Mountain (AZ)','America/Phoenix','mt'],['Pacific','America/Los_Angeles','pt']];
+  document.getElementById('conv-out').innerHTML = zones.map(([n,z,zc])=>
+    '<div class="conv-line"><span class="zn"><i style="background:var(--z-'+zc+')"></i>'+n+'</span><span class="tm">'+fmtInTz(instant,z)+'</span></div>'
+  ).join('');
+  // overlap check
+  const end = new Date(instant.getTime()+90*60000);
+  const n = events.filter(ev=> ev.start < end && ev.end > instant).length;
+  const cap = instructorsAt(instant) || maxInstructors();
+  const v = document.getElementById('conv-verdict');
+  if (n>=cap){ v.style.background='var(--red-bg)'; v.style.color='var(--red)'; v.textContent='🔴 '+n+' already running — at capacity ('+cap+'). Reschedule needed.'; }
+  else if (n>=cap*0.7){ v.style.background='var(--amber-bg)'; v.style.color='var(--amber)'; v.textContent='🟡 '+n+' running, cap '+cap+'. Getting tight.'; }
+  else { v.style.background='var(--green-bg)'; v.style.color='var(--green)'; v.textContent='🟢 Only '+n+' running then (cap '+cap+'). Plenty of room.'; }
+}
+/* robust: wall-clock (h:m) in a tz, on the calendar day refDay falls on in that tz -> absolute instant */
+function tzOffsetMinutes(date, tz){
+  const parts = {};
+  new Intl.DateTimeFormat('en-US',{timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false})
+    .formatToParts(date).forEach(p=>parts[p.type]=p.value);
+  const asUTC = Date.UTC(+parts.year, +parts.month-1, +parts.day, (parts.hour==='24'?0:+parts.hour), +parts.minute);
+  return (asUTC - date.getTime())/60000;
+}
+function localTimeToInstant(min, tz){
+  const d = {};
+  new Intl.DateTimeFormat('en-CA',{timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit'})
+    .formatToParts(refDay).forEach(p=>d[p.type]=p.value);
+  const utcGuess = Date.UTC(+d.year, +d.month-1, +d.day, Math.floor(min/60), min%60);
+  const off = tzOffsetMinutes(new Date(utcGuess), tz);
+  return new Date(utcGuess - off*60000);
+}
+
+/* ============================================================
+   WIRING
+   ============================================================ */
+const convLoc = document.getElementById('conv-loc');
+LOCATIONS.forEach(l=>{ const o=document.createElement('option'); o.value=l; o.textContent=l; convLoc.appendChild(o); });
+convLoc.value='San Francisco';
+document.getElementById('shift-label').textContent = shiftsLabel();
+document.getElementById('tz-select').addEventListener('change', rerender);
+document.getElementById('conv-loc').addEventListener('change', renderConverter);
+document.getElementById('conv-time').addEventListener('input', renderConverter);
+// prev/next step by month in month view, by day when zoomed in
+document.getElementById('day-prev').addEventListener('click', ()=>{ viewMode==='month' ? refDay.setMonth(refDay.getMonth()-1) : refDay.setDate(refDay.getDate()-1); load(); });
+document.getElementById('day-next').addEventListener('click', ()=>{ viewMode==='month' ? refDay.setMonth(refDay.getMonth()+1) : refDay.setDate(refDay.getDate()+1); load(); });
+document.getElementById('day-today').addEventListener('click', ()=>{ refDay = new Date(); load(); });
+document.getElementById('btn-back').addEventListener('click', ()=>{ viewMode='month'; load(); });
+// click a day in the month grid -> zoom into that day
+document.getElementById('mgrid').addEventListener('click', e=>{
+  const cell=e.target.closest('.mcell'); if(!cell || cell.classList.contains('empty')) return;
+  refDay = new Date(refDay.getFullYear(), refDay.getMonth(), +cell.dataset.day, 12, 0, 0);
+  viewMode='day'; load();
+});
+
+if (new URLSearchParams(location.search).get('embed')) document.body.classList.add('embed');
+load();
+</script>
+</body>
+</html>

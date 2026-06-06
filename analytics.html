@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CPR Syndicate — Analytics</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  :root{--purple:#6D3BF5;--purple-2:#7C3AED;--purple-dim:#EEEAFE;--bg:#F5F5FA;--card:#FFF;--ink:#1B1B2E;--muted:#8A8A99;--border:#E6E6F0;
+    --green:#16A34A;--green-bg:#F0FDF4;--amber:#D97706;--amber-bg:#FFFBEB;--red:#EF4444;--red-bg:#FEF2F2;
+    --bls:#6D3BF5;--rc:#E11D48;--hs:#EA7C1E;--other:#64748B;}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,sans-serif;background:var(--bg);color:var(--ink);}
+  .topbar{background:var(--card);border-bottom:1px solid var(--border);padding:14px 26px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;position:sticky;top:0;z-index:30;}
+  .brand{display:flex;align-items:center;gap:11px;}
+  .logo-icon{width:34px;height:34px;background:linear-gradient(135deg,var(--purple-2),var(--purple));border-radius:9px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;font-weight:700;}
+  .brand h1{font-size:17px;font-weight:800;letter-spacing:-.02em;} .brand p{font-size:12px;color:var(--muted);}
+  body.embed .brand{display:none;} body.embed .topbar{justify-content:flex-end;}
+  .nav{display:flex;align-items:center;gap:8px;}
+  .icon-btn{width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:#fff;cursor:pointer;font-size:14px;color:var(--ink);}
+  .icon-btn:hover{border-color:var(--purple);color:var(--purple);}
+  .label{font-size:16px;font-weight:800;min-width:150px;}
+  .wrap{padding:18px 26px 50px;}
+  .banner{display:flex;align-items:center;gap:10px;border-radius:12px;padding:11px 16px;font-size:13px;font-weight:500;margin-bottom:16px;}
+  .banner.ok{background:var(--green-bg);color:var(--green);} .banner.warn{background:var(--amber-bg);color:var(--amber);} .banner.err{background:var(--red-bg);color:var(--red);}
+  .banner code{background:rgba(0,0,0,.06);padding:1px 6px;border-radius:5px;}
+
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;}
+  .kpi{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:15px 17px;}
+  .kpi .l{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;}
+  .kpi .v{font-size:27px;font-weight:800;line-height:1;margin-top:7px;letter-spacing:-.02em;}
+  .kpi .s{font-size:11.5px;color:var(--muted);margin-top:6px;}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+  @media(max-width:900px){.grid2{grid-template-columns:1fr;} .kpis{grid-template-columns:1fr 1fr;}}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:18px 20px;margin-bottom:18px;}
+  .card h3{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:14px;}
+
+  .bar-row{display:grid;grid-template-columns:130px 1fr 46px;align-items:center;gap:10px;margin-bottom:9px;}
+  .bar-row .name{font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .bar-track{background:var(--bg);border-radius:6px;height:16px;overflow:hidden;}
+  .bar-fill{height:100%;border-radius:6px;}
+  .bar-row .num{font-size:12px;font-weight:800;text-align:right;font-variant-numeric:tabular-nums;}
+
+  /* By location — itemized per certification */
+  .loc-row{margin-bottom:15px;}
+  .loc-row:last-child{margin-bottom:0;}
+  .loc-row .loc-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:5px;}
+  .loc-row .loc-head .name{font-size:13px;font-weight:700;}
+  .loc-row .loc-head .tot{font-size:11.5px;font-weight:600;color:var(--muted);white-space:nowrap;}
+  .loc-row .loc-head .tot b{color:var(--ink);font-weight:800;font-size:13px;margin-right:2px;}
+  .stacked{display:flex;height:16px;border-radius:6px;overflow:hidden;background:var(--bg);}
+  .stacked .seg{height:100%;}
+  .loc-items{display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:6px;}
+  .loc-items span{font-size:11px;font-weight:600;color:var(--muted);display:flex;align-items:center;gap:5px;}
+  .loc-items i{width:9px;height:9px;border-radius:3px;flex-shrink:0;}
+  .loc-items b{color:var(--ink);font-weight:800;}
+
+  .cols{display:flex;gap:10px;align-items:flex-end;height:150px;margin-top:6px;}
+  .col{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;justify-content:flex-end;}
+  .col .barv{width:62%;background:var(--purple);border-radius:5px 5px 0 0;min-height:2px;}
+  .col .clbl{font-size:10px;color:var(--muted);font-weight:600;}
+  .col .cval{font-size:10.5px;font-weight:800;}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><div class="logo-icon">+</div><div><h1>Analytics</h1><p>Bookings from Google Calendar</p></div></div>
+  <div class="nav">
+    <button class="icon-btn" id="prev">‹</button>
+    <button class="icon-btn" id="today" style="width:auto;padding:0 11px;font-size:12px;font-weight:700;">This month</button>
+    <button class="icon-btn" id="next">›</button>
+    <span class="label" id="label"></span>
+  </div>
+</header>
+<div class="wrap">
+  <div id="banner"></div>
+  <div class="kpis" id="kpis"></div>
+  <div class="grid2">
+    <div class="card"><h3>By certification</h3><div id="byCert"></div></div>
+    <div class="card"><h3>By location</h3><div id="byLoc"></div></div>
+  </div>
+  <div class="card"><h3>By day of week</h3><div class="cols" id="byDow"></div></div>
+  <div class="card"><h3>By start hour (local)</h3><div class="cols" id="byHour"></div></div>
+  <div class="grid2">
+    <div class="card"><h3>By region</h3><div id="byZone"></div></div>
+    <div class="card"><h3>Capacity used <span style="font-weight:600;text-transform:none;color:var(--muted)">(booked vs ~10 seats/class)</span></h3><div id="cap"></div></div>
+  </div>
+</div>
+
+<script>
+const CONFIG={ GCAL_API_KEY:'AIzaSyC_TFebAKiiw97ZRl3pjA75pC9vt-23r7Y', GCAL_ID:'cprsyndicate@gmail.com', SEATS:10 };
+const LOC_TZ={'Tempe':'America/Phoenix','Long Beach':'America/Los_Angeles','DTLA':'America/Los_Angeles','Los Angeles (DTLA)':'America/Los_Angeles','San Francisco':'America/Los_Angeles','Pasadena':'America/Los_Angeles','Houston':'America/Chicago','Manhattan':'America/New_York','Columbus':'America/New_York','Atlanta':'America/New_York','Indianapolis':'America/New_York','Philadelphia':'America/New_York','Virginia Beach':'America/New_York'};
+const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const DOW=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const CERTCOLOR={'BLS':'var(--bls)','Red Cross FA':'var(--rc)','Heartsaver':'var(--hs)','Other':'var(--other)'};
+function zoneLabel(tz){return ({'America/New_York':'Eastern','America/Chicago':'Central','America/Phoenix':'Arizona','America/Los_Angeles':'Pacific'})[tz]||'Other';}
+function parseTitle(s=''){
+  const m=s.match(/^\s*(.+?)\s*[—–-]\s*(.*)$/); let loc=s.trim(),rest='';
+  if(m){loc=m[1].trim();rest=m[2].trim();}
+  const cm=rest.match(/(red cross[^·\-—]*|heartsaver[^·\-—]*|bls[^·\-—]*|acls[^·\-—]*|pals[^·\-—]*|first aid[^·\-—]*)/i);
+  return {location:loc, course:cm?cm[0].trim():rest};
+}
+function courseLabel(t=''){t=t.toLowerCase(); if(t.includes('bls'))return'BLS'; if(t.includes('heartsaver'))return'Heartsaver'; if(t.includes('red cross')||t.includes('redcross')||/first aid/.test(t)||t.includes('rcfa'))return'Red Cross FA'; return'Other';}
+function localHour(date,tz){ return +new Intl.DateTimeFormat('en-US',{timeZone:tz,hour:'2-digit',hour12:false}).format(date)%24; }
+
+let ref=new Date();
+async function load(){
+  const y=ref.getFullYear(), m=ref.getMonth();
+  document.getElementById('label').textContent=MONTHS[m]+' '+y;
+  const tmin=new Date(y,m,1), tmax=new Date(y,m+1,1);
+  const banner=document.getElementById('banner');
+  let evs=[];
+  if(CONFIG.GCAL_API_KEY && CONFIG.GCAL_ID){
+    const url='https://www.googleapis.com/calendar/v3/calendars/'+encodeURIComponent(CONFIG.GCAL_ID)+'/events?key='+CONFIG.GCAL_API_KEY+'&singleEvents=true&orderBy=startTime&maxResults=2500&timeMin='+tmin.toISOString()+'&timeMax='+tmax.toISOString();
+    try{
+      const r=await fetch(url); if(!r.ok)throw new Error('HTTP '+r.status);
+      const d=await r.json();
+      evs=(d.items||[]).filter(e=>e.start&&e.start.dateTime).map(e=>{
+        const p=parseTitle(e.summary||''); const tz=LOC_TZ[p.location]||'America/New_York';
+        return {start:new Date(e.start.dateTime), location:p.location, cert:courseLabel(p.course), tz};
+      });
+      banner.className='banner ok'; banner.innerHTML='🟢 Live — '+evs.length+' bookings from Google Calendar.';
+    }catch(err){ banner.className='banner err'; banner.innerHTML='🔴 Calendar error ('+err.message+').'; }
+  } else { banner.className='banner warn'; banner.innerHTML='⚠️ Add API key + calendar ID to CONFIG.'; }
+  render(evs);
+}
+
+function tally(arr,fn){const o={};arr.forEach(x=>{const k=fn(x);if(k!=null)o[k]=(o[k]||0)+1;});return o;}
+function barList(elId, obj, colorFn, sortByVal=true){
+  const el=document.getElementById(elId);
+  let entries=Object.entries(obj);
+  entries=sortByVal?entries.sort((a,b)=>b[1]-a[1]):entries;
+  const max=Math.max(1,...entries.map(e=>e[1])); const tot=entries.reduce((s,e)=>s+e[1],0)||1;
+  el.innerHTML=entries.map(([k,v])=>
+    '<div class="bar-row"><span class="name">'+k+'</span>'
+    +'<div class="bar-track"><div class="bar-fill" style="width:'+(v/max*100)+'%;background:'+(colorFn?colorFn(k):'var(--purple)')+'"></div></div>'
+    +'<span class="num">'+v+' · '+Math.round(v/tot*100)+'%</span></div>').join('') || '<div class="name" style="color:var(--muted)">No data</div>';
+}
+function colChart(elId, labels, vals, color){
+  const el=document.getElementById(elId); const max=Math.max(1,...vals);
+  el.innerHTML=labels.map((l,i)=>
+    '<div class="col"><span class="cval">'+(vals[i]||'')+'</span><div class="barv" style="height:'+(vals[i]/max*120)+'px;background:'+(color||'var(--purple)')+'"></div><span class="clbl">'+l+'</span></div>').join('');
+}
+
+function render(evs){
+  // KPIs
+  const byCert=tally(evs,e=>e.cert);
+  const byLoc=tally(evs,e=>e.location);
+  const byDow=tally(evs,e=>e.start.getDay());
+  const days=new Set(evs.map(e=>e.start.toISOString().slice(0,10)));
+  const topCert=Object.entries(byCert).sort((a,b)=>b[1]-a[1])[0];
+  const topLoc=Object.entries(byLoc).sort((a,b)=>b[1]-a[1])[0];
+  const busiestDow=Object.entries(byDow).sort((a,b)=>b[1]-a[1])[0];
+  document.getElementById('kpis').innerHTML=
+    kpi('Total bookings',evs.length,'this month')
+    +kpi('Most popular',topCert?topCert[0]:'—',topCert?topCert[1]+' bookings':'')
+    +kpi('Top location',topLoc?topLoc[0]:'—',topLoc?topLoc[1]+' bookings':'')
+    +kpi('Busiest day',busiestDow?DOW[busiestDow[0]]:'—',busiestDow?busiestDow[1]+' bookings':'');
+
+  barList('byCert',byCert,k=>CERTCOLOR[k]||'var(--purple)');
+  renderLocBreakdown(evs);
+  colChart('byDow',DOW,DOW.map((_,i)=>byDow[i]||0));
+  const hours=[]; for(let h=8;h<=21;h++)hours.push(h);
+  const byHr=tally(evs,e=>localHour(e.start,e.tz));
+  colChart('byHour',hours.map(h=>((h%12)||12)+(h<12?'a':'p')),hours.map(h=>byHr[h]||0));
+  barList('byZone',tally(evs,e=>zoneLabel(e.tz)),()=>'var(--purple-2)');
+  // capacity: bookings vs (#classes * seats). approximate #classes = distinct location+start.
+  const classes=new Set(evs.map(e=>e.location+'|'+e.start.toISOString())).size;
+  const seats=classes*CONFIG.SEATS;
+  const pct=seats?Math.round(evs.length/seats*100):0;
+  document.getElementById('cap').innerHTML=
+    '<div class="bar-row"><span class="name">Seats filled</span><div class="bar-track"><div class="bar-fill" style="width:'+Math.min(100,pct)+'%;background:var(--green)"></div></div><span class="num">'+pct+'%</span></div>'
+    +'<div class="name" style="color:var(--muted);margin-top:8px">'+evs.length+' booked across ~'+classes+' classes ('+seats+' seats)</div>';
+}
+function kpi(l,v,s){return '<div class="kpi"><div class="l">'+l+'</div><div class="v">'+v+'</div><div class="s">'+s+'</div></div>';}
+
+/* By location, itemized by certification: stacked bar + exact counts per cert */
+function renderLocBreakdown(evs){
+  const el=document.getElementById('byLoc');
+  const order=['Red Cross FA','BLS','Heartsaver','Other'];
+  const map={}, locTot={};
+  evs.forEach(e=>{ (map[e.location]=map[e.location]||{})[e.cert]=((map[e.location]||{})[e.cert]||0)+1; locTot[e.location]=(locTot[e.location]||0)+1; });
+  const locs=Object.keys(locTot).sort((a,b)=>locTot[b]-locTot[a]);
+  if(!locs.length){ el.innerHTML='<div class="name" style="color:var(--muted)">No data</div>'; return; }
+  el.innerHTML=locs.map(loc=>{
+    const c=map[loc]||{}, tot=locTot[loc];
+    const certs=order.filter(k=>c[k]>0);
+    const segs=certs.map(k=>'<div class="seg" style="width:'+(c[k]/tot*100)+'%;background:'+(CERTCOLOR[k]||'var(--purple)')+'"></div>').join('');
+    const items=certs.map(k=>'<span><i style="background:'+(CERTCOLOR[k]||'var(--purple)')+'"></i>'+k+' <b>'+c[k]+'</b></span>').join('');
+    return '<div class="loc-row"><div class="loc-head"><span class="name">'+loc+'</span><span class="tot"><b>'+tot+'</b>total</span></div>'
+      +'<div class="stacked">'+segs+'</div><div class="loc-items">'+items+'</div></div>';
+  }).join('');
+}
+
+document.getElementById('prev').addEventListener('click',()=>{ref.setMonth(ref.getMonth()-1);load();});
+document.getElementById('next').addEventListener('click',()=>{ref.setMonth(ref.getMonth()+1);load();});
+document.getElementById('today').addEventListener('click',()=>{ref=new Date();load();});
+if(new URLSearchParams(location.search).get('embed'))document.body.classList.add('embed');
+load();
+</script>
+</body>
+</html>

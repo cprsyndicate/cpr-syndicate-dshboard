@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CPR Syndicate — Instructor Schedule</title>
+<style>
+  * { box-sizing:border-box; margin:0; padding:0; }
+  :root{
+    --purple:#6D3BF5; --purple-2:#7C3AED; --purple-dim:#EEEAFE; --purple-dim-2:#F4F1FF;
+    --bg:#F5F5FA; --card:#FFF; --ink:#1B1B2E; --muted:#8A8A99; --border:#E6E6F0;
+    --green:#16A34A; --green-bg:#F0FDF4; --amber:#D97706; --red:#EF4444;
+  }
+  body{ font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,sans-serif; background:var(--bg); color:var(--ink); }
+  .topbar{ background:var(--card); border-bottom:1px solid var(--border); padding:14px 26px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; position:sticky; top:0; z-index:30; }
+  .brand{ display:flex; align-items:center; gap:11px; }
+  .logo-icon{ width:34px; height:34px; background:linear-gradient(135deg,var(--purple-2),var(--purple)); border-radius:9px; display:flex; align-items:center; justify-content:center; color:#fff; font-size:20px; font-weight:700; }
+  .brand h1{ font-size:17px; font-weight:800; letter-spacing:-.02em; }
+  .brand p{ font-size:12px; color:var(--muted); }
+  body.embed .brand{ display:none; } body.embed .topbar{ justify-content:flex-end; }
+  .nav{ display:flex; align-items:center; gap:8px; }
+  .icon-btn{ width:32px; height:32px; border-radius:8px; border:1px solid var(--border); background:#fff; cursor:pointer; font-size:14px; color:var(--ink); }
+  .icon-btn:hover{ border-color:var(--purple); color:var(--purple); }
+  .label{ font-size:16px; font-weight:800; min-width:150px; }
+  .wrap{ padding:18px 26px 50px; }
+
+  /* legend */
+  .legend{ display:flex; gap:14px; flex-wrap:wrap; margin-bottom:14px; }
+  .legend span{ font-size:12px; color:var(--ink); font-weight:600; display:flex; align-items:center; gap:6px; }
+  .legend i{ width:12px; height:12px; border-radius:4px; display:inline-block; }
+  .legend small{ color:var(--muted); font-weight:500; }
+
+  /* month grid */
+  .mgrid{ display:grid; grid-template-columns:repeat(7,1fr); gap:6px; }
+  .mdow{ font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); text-align:center; padding:4px 0; }
+  .mcell{ background:var(--card); border:1px solid var(--border); border-radius:10px; min-height:104px; padding:7px; cursor:pointer; display:flex; flex-direction:column; gap:4px; transition:border-color .15s, box-shadow .15s; }
+  .mcell:hover{ border-color:var(--purple); box-shadow:0 6px 16px -9px rgba(109,59,245,.55); }
+  .mcell.empty{ background:transparent; border:none; cursor:default; }
+  .mcell.today{ border-color:var(--purple); box-shadow:0 0 0 1px var(--purple); }
+  .mcell.weekend .mdate{ color:var(--muted); }
+  .mdate{ font-size:12px; font-weight:700; }
+  .ichips{ display:flex; flex-wrap:wrap; gap:3px; }
+  .ichip{ font-size:9px; font-weight:800; color:#fff; border-radius:5px; padding:1px 5px; }
+
+  /* day view (gantt) */
+  .dayback{ margin-bottom:12px; }
+  .gwrap{ background:var(--card); border:1px solid var(--border); border-radius:14px; padding:16px 18px; overflow-x:auto; }
+  .gtitle{ font-size:14px; font-weight:800; margin-bottom:14px; }
+  .gaxis{ position:relative; height:20px; margin-left:140px; border-bottom:1px solid var(--border); }
+  .gtick{ position:absolute; font-size:10px; color:var(--muted); font-weight:600; transform:translateX(-50%); }
+  .grow{ display:flex; align-items:center; height:38px; margin-top:8px; }
+  .gname{ width:140px; flex-shrink:0; font-size:12.5px; font-weight:700; display:flex; align-items:center; gap:7px; }
+  .gdot{ width:18px; height:18px; border-radius:5px; color:#fff; font-size:9px; font-weight:800; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .gtrack{ position:relative; flex:1; height:26px; }
+  .gbar{ position:absolute; height:26px; border-radius:7px; color:#fff; font-size:10.5px; font-weight:700; display:flex; align-items:center; padding:0 8px; white-space:nowrap; overflow:hidden; }
+  .gnone{ font-size:13px; color:var(--muted); padding:20px 0; }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><div class="logo-icon">+</div><div><h1>Instructor Schedule</h1><p>Who's on shift, by day</p></div></div>
+  <div class="nav">
+    <button class="icon-btn" id="prev">‹</button>
+    <button class="icon-btn" id="today" style="width:auto;padding:0 11px;font-size:12px;font-weight:700;">Today</button>
+    <button class="icon-btn" id="next">›</button>
+    <span class="label" id="label"></span>
+  </div>
+</header>
+<div class="wrap">
+  <div class="legend" id="legend"></div>
+  <div class="dayback" id="dayback" style="display:none;">
+    <button class="icon-btn" id="back" style="width:auto;padding:0 13px;font-size:12px;font-weight:700;">‹ Back to month</button>
+  </div>
+  <div id="month"></div>
+  <div id="day" style="display:none;"></div>
+</div>
+
+<script>
+/* ============================================================
+   INSTRUCTOR ROSTER (shift rules by day of week).
+   et:[start,end] in Eastern 24h hours. label = how they read their hours.
+   dows: 0=Sun ... 6=Sat. Edit here as schedules firm up.
+   ============================================================ */
+const ROSTER = [
+  { name:'Marcel Manansala', initials:'MMM', color:'#6D3BF5',
+    shifts:[ {dows:[1,2,3,4,5], et:[9,15],  label:'9a–3p ET'},
+             {dows:[0],          et:[9,16],  label:'9a–4p ET (Sun)'} ] },
+  { name:'Mariel Manansala', initials:'MM', color:'#DB2777',
+    shifts:[ {dows:[1,2,3,4,5], et:[9,15],  label:'9a–3p ET'},
+             {dows:[6],          et:[9,16],  label:'9a–4p ET (Sat)'} ] },
+  { name:'Marcela Luna', initials:'ML', color:'#0D9488',
+    shifts:[ {dows:[1,2,3,4,5], et:[15,23], label:'3p–11p ET'} ] },
+  { name:'Reimund Sagansay', initials:'RS', color:'#CA8A04',
+    shifts:[ {dows:[0,1,2,3,4], et:[17,23], label:'5p–11p ET'} ] },
+  { name:'Diego Ramirez', initials:'DR', color:'#2563EB',
+    shifts:[ {dows:[1,2,3,4,5], et:[16,24], label:'1p–9p PST'},
+             {dows:[0,6],        et:[12,19], label:'9a–4p PST (wknd)'} ] },
+];
+function shiftsOn(dow){
+  const out=[];
+  ROSTER.forEach(r=> r.shifts.forEach(s=>{ if(s.dows.includes(dow)) out.push({...r, et:s.et, label:s.label}); }));
+  return out.sort((a,b)=> a.et[0]-b.et[0]);
+}
+const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const DOW=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+let ref=new Date(); let mode='month';
+
+function renderLegend(){
+  document.getElementById('legend').innerHTML = ROSTER.map(r=>
+    '<span><i style="background:'+r.color+'"></i>'+r.initials+' <small>'+r.name.split(' ')[0]+'</small></span>').join('');
+}
+function renderMonth(){
+  mode='month';
+  document.getElementById('month').style.display=''; document.getElementById('day').style.display='none';
+  document.getElementById('dayback').style.display='none';
+  const y=ref.getFullYear(), m=ref.getMonth();
+  document.getElementById('label').textContent = MONTHS[m]+' '+y;
+  let h='<div class="mgrid">'+DOW.map(d=>'<div class="mdow">'+d+'</div>').join('');
+  const firstDow=new Date(y,m,1).getDay(), dim=new Date(y,m+1,0).getDate();
+  const today=new Date();
+  for(let i=0;i<firstDow;i++) h+='<div class="mcell empty"></div>';
+  for(let day=1;day<=dim;day++){
+    const dow=new Date(y,m,day).getDay();
+    const ins=shiftsOn(dow);
+    const isToday=today.getFullYear()===y&&today.getMonth()===m&&today.getDate()===day;
+    const wknd=(dow===0||dow===6)?' weekend':'';
+    h+='<div class="mcell'+(isToday?' today':'')+wknd+'" data-day="'+day+'">'
+      +'<div class="mdate">'+day+'</div><div class="ichips">'
+      + ins.map(i=>'<span class="ichip" style="background:'+i.color+'" title="'+i.name+' · '+i.label+'">'+i.initials+'</span>').join('')
+      +'</div></div>';
+  }
+  h+='</div>';
+  document.getElementById('month').innerHTML=h;
+}
+function fmtH(h){ const hh=Math.floor(h)%24; const ap=hh>=12?'p':'a'; const h12=hh%12||12; const mm=Math.round((h-Math.floor(h))*60); return h12+(mm?':'+String(mm).padStart(2,'0'):'')+ap; }
+function renderDay(){
+  mode='day';
+  document.getElementById('month').style.display='none'; document.getElementById('day').style.display='';
+  document.getElementById('dayback').style.display='';
+  const dow=ref.getDay();
+  document.getElementById('label').textContent = ref.toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'});
+  const ins=shiftsOn(dow);
+  const START=9, END=24, span=END-START;
+  let h='<div class="gwrap"><div class="gtitle">Shifts on '+DOW[dow]+' — Eastern clock</div>';
+  // axis
+  h+='<div class="gaxis">';
+  for(let t=START;t<=END;t+=3){ h+='<span class="gtick" style="left:'+((t-START)/span*100)+'%">'+fmtH(t===24?0:t)+'</span>'; }
+  h+='</div>';
+  if(!ins.length){ h+='<div class="gnone">No instructors scheduled.</div>'; }
+  ins.forEach(i=>{
+    const L=(i.et[0]-START)/span*100, W=(i.et[1]-i.et[0])/span*100;
+    h+='<div class="grow"><div class="gname"><span class="gdot" style="background:'+i.color+'">'+i.initials+'</span>'+i.name.split(' ')[0]+'</div>'
+      +'<div class="gtrack"><div class="gbar" style="left:'+L+'%;width:'+W+'%;background:'+i.color+'">'+i.label+'</div></div></div>';
+  });
+  h+='</div>';
+  document.getElementById('day').innerHTML=h;
+}
+function render(){ mode==='month'?renderMonth():renderDay(); }
+// wiring
+document.getElementById('prev').addEventListener('click',()=>{ mode==='month'?ref.setMonth(ref.getMonth()-1):ref.setDate(ref.getDate()-1); render(); });
+document.getElementById('next').addEventListener('click',()=>{ mode==='month'?ref.setMonth(ref.getMonth()+1):ref.setDate(ref.getDate()+1); render(); });
+document.getElementById('today').addEventListener('click',()=>{ ref=new Date(); render(); });
+document.getElementById('back').addEventListener('click',()=>{ mode='month'; render(); });
+document.getElementById('month').addEventListener('click',e=>{ const c=e.target.closest('.mcell'); if(!c||c.classList.contains('empty'))return; ref=new Date(ref.getFullYear(),ref.getMonth(),+c.dataset.day); mode='day'; render(); });
+if(new URLSearchParams(location.search).get('embed')) document.body.classList.add('embed');
+renderLegend(); render();
+</script>
+</body>
+</html>

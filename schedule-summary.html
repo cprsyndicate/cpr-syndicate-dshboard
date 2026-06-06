@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CPR Syndicate — Class Schedule</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  :root{--purple:#6D3BF5;--purple-2:#7C3AED;--ink:#1B1B2E;--muted:#7A7A88;--border:#E6E6F0;--bg:#F5F5FA;
+    --bls:#6D3BF5;--bls-bg:#EEEAFE;--rc:#E11D48;--rc-bg:#FFE9EE;--hs:#EA7C1E;--hs-bg:#FFF1E3;}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,sans-serif;background:var(--bg);color:var(--ink);padding:32px;}
+  .sheet{max-width:1080px;margin:0 auto;background:#fff;border:1px solid var(--border);border-radius:18px;overflow:hidden;box-shadow:0 16px 50px -24px rgba(27,27,46,.4);}
+  .head{background:linear-gradient(135deg,var(--purple-2),var(--purple));color:#fff;padding:24px 30px;display:flex;align-items:center;gap:14px;}
+  .logo{width:44px;height:44px;background:rgba(255,255,255,.18);border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800;}
+  .head h1{font-size:23px;font-weight:800;letter-spacing:-.02em;}
+  .head p{font-size:13px;opacity:.9;margin-top:2px;}
+  .body{padding:26px 30px 30px;}
+  h2{font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--purple);margin:22px 0 10px;}
+  h2:first-child{margin-top:0;}
+  table{width:100%;border-collapse:separate;border-spacing:0;font-size:14px;}
+  th,td{padding:11px 14px;text-align:left;border-bottom:1px solid var(--border);}
+  thead th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);background:var(--bg);font-weight:800;}
+  thead th:first-child{border-top-left-radius:10px;} thead th:last-child{border-top-right-radius:10px;}
+  .cert{font-weight:800;display:flex;align-items:center;gap:8px;white-space:nowrap;}
+  .dot{width:11px;height:11px;border-radius:4px;display:inline-block;}
+  .times{font-weight:700;font-variant-numeric:tabular-nums;}
+  tr.bls td:first-child{color:var(--bls);} tr.rc td:first-child{color:var(--rc);} tr.hs td:first-child{color:var(--hs);}
+  tr.bls .times{color:#4a2bb0;} tr.rc .times{color:#b01437;} tr.hs .times{color:#a85510;}
+  .closed{color:var(--muted);font-style:italic;font-weight:600;}
+  .note{font-size:12.5px;color:var(--muted);margin-top:6px;}
+  .cols2{display:grid;grid-template-columns:1fr 1fr;gap:26px;margin-top:22px;}
+  .key{font-size:13px;line-height:1.7;}
+  .key b{color:var(--ink);}
+  .badge{display:inline-block;font-size:11px;font-weight:800;color:#fff;border-radius:5px;padding:1px 6px;margin-right:4px;}
+  .footer{border-top:1px solid var(--border);margin-top:22px;padding-top:14px;font-size:12px;color:var(--muted);line-height:1.6;}
+  .pill{display:inline-block;background:var(--bg);border:1px solid var(--border);border-radius:100px;padding:2px 10px;font-size:12px;font-weight:700;margin:2px 3px 2px 0;}
+</style>
+</head>
+<body>
+<div class="sheet">
+  <div class="head">
+    <div class="logo">+</div>
+    <div><h1>CPR Syndicate — Class Schedule</h1><p>All locations · local times shown · one class at a time per location</p></div>
+  </div>
+  <div class="body">
+
+    <h2>Weekdays · Monday–Friday</h2>
+    <table>
+      <thead><tr><th>Certification</th><th>Eastern locations</th><th>Central · Houston</th><th>Pacific &amp; Arizona</th></tr></thead>
+      <tbody>
+        <tr class="bls"><td class="cert"><span class="dot" style="background:var(--bls)"></span>BLS</td><td class="times">9:00a · 10:00a · 6:30p</td><td class="times">9:00a · 10:00a · 6:30p</td><td class="times">10:00a · 11:00a · 6:30p</td></tr>
+        <tr class="rc"><td class="cert"><span class="dot" style="background:var(--rc)"></span>Red Cross First Aid</td><td class="times">11:30a · 2:00p · 5:00p</td><td class="times">11:30a · 2:00p · 5:00p</td><td class="times">12:00p · 2:00p · 5:00p</td></tr>
+        <tr class="hs"><td class="cert"><span class="dot" style="background:var(--hs)"></span>Heartsaver</td><td class="times">4:00p</td><td class="times">4:00p</td><td class="times">4:00p</td></tr>
+      </tbody>
+    </table>
+    <div class="note">Evening BLS + Red Cross after 5pm at every location · nothing starts past 7pm · ~1–2 reschedules/day expected around 3–4pm ET.</div>
+
+    <h2>Weekends · Saturday &amp; Sunday &nbsp;<span style="color:var(--muted);font-weight:600;text-transform:none;letter-spacing:0;">(open 9am–4pm)</span></h2>
+    <table>
+      <thead><tr><th>Certification</th><th>Eastern locations</th><th>Central · Houston</th><th>Pacific &amp; Arizona</th></tr></thead>
+      <tbody>
+        <tr class="bls"><td class="cert"><span class="dot" style="background:var(--bls)"></span>BLS</td><td class="times">9:00a · 10:00a</td><td class="closed">Closed</td><td class="times">9:00a · 10:00a</td></tr>
+        <tr class="rc"><td class="cert"><span class="dot" style="background:var(--rc)"></span>Red Cross First Aid</td><td class="times">11:00a · 12:30p · 2:00p</td><td class="closed">Closed</td><td class="times">11:00a · 12:30p · 2:00p</td></tr>
+      </tbody>
+    </table>
+    <div class="note">Weekends: <b>Houston &amp; Indianapolis closed.</b> No Heartsaver. Zero scheduling conflicts.</div>
+
+    <div class="cols2">
+      <div>
+        <h2>Locations by timezone</h2>
+        <div class="key">
+          <div><b>Eastern</b> — Manhattan, Philadelphia, Virginia Beach, Columbus, Atlanta, Indianapolis</div>
+          <div><b>Central</b> — Houston</div>
+          <div><b>Pacific / Arizona</b> — Long Beach, DTLA, San Francisco, Pasadena, Tempe</div>
+        </div>
+      </div>
+      <div>
+        <h2>Instructors on shift</h2>
+        <div class="key">
+          <div><span class="badge" style="background:#6D3BF5">MMM</span> Marcel — M–F 9a–3p · Sun 9a–4p ET</div>
+          <div><span class="badge" style="background:#DB2777">MM</span> Mariel — M–F 9a–3p · Sat 9a–4p ET</div>
+          <div><span class="badge" style="background:#0D9488">ML</span> Marcela — M–F 3p–11p ET</div>
+          <div><span class="badge" style="background:#CA8A04">RS</span> Reimund — Sun–Thu 5p–11p ET</div>
+          <div><span class="badge" style="background:#2563EB">DR</span> Diego — M–F 1p–9p PST · wknd 9a–4p PST</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      Class lengths: BLS &amp; Heartsaver = 60 min · Red Cross First Aid = 90 min.
+      &nbsp;|&nbsp; Times are each location's local clock (what the customer books).
+      &nbsp;|&nbsp; Summer layout (Tempe = Pacific); Tempe shifts +1 hr when daylight saving ends.
+    </div>
+  </div>
+</div>
+</body>
+</html>

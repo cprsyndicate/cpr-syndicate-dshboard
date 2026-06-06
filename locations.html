@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CPR Syndicate — Certifications sold per location</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  :root{
+    --purple:#6D3BF5;--purple-2:#7C3AED;--purple-dim:#EEEAFE;--purple-dim-2:#F4F1FF;
+    --bg:#F5F5FA;--card:#FFF;--ink:#1B1B2E;--muted:#8A8A99;--border:#E6E6F0;
+    --green:#16A34A;--green-bg:#F0FDF4;--amber:#D97706;--amber-bg:#FFFBEB;--red:#EF4444;--red-bg:#FEF2F2;
+    /* cert colors */
+    --bls:#6D3BF5;--bls-bg:#EEEAFE;--rc:#E11D48;--rc-bg:#FFE9EE;--hs:#EA7C1E;--hs-bg:#FFF1E3;
+    --acls:#0D9488;--acls-bg:#E6FAF6;--pals:#2563EB;--pals-bg:#E8EFFD;--other:#8A8A99;--other-bg:#F0F0F4;
+  }
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,sans-serif;background:var(--bg);color:var(--ink);}
+
+  .topbar{background:var(--card);border-bottom:1px solid var(--border);padding:14px 26px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;position:sticky;top:0;z-index:30;}
+  body.embed .brand{display:none;}
+  body.embed .topbar{justify-content:flex-end;padding:12px 22px;}
+  .brand{display:flex;align-items:center;gap:11px;}
+  .logo-icon{width:34px;height:34px;background:linear-gradient(135deg,var(--purple-2),var(--purple));border-radius:9px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;font-weight:700;}
+  .brand h1{font-size:17px;font-weight:800;letter-spacing:-.02em;}
+  .brand p{font-size:12px;color:var(--muted);}
+  .controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .icon-btn{width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:#fff;cursor:pointer;font-size:14px;color:var(--ink);}
+  .icon-btn:hover{border-color:var(--purple);color:var(--purple);}
+  .icon-btn:disabled{opacity:.35;cursor:not-allowed;}
+  .mlabel{font-size:15px;font-weight:800;letter-spacing:-.01em;min-width:138px;text-align:center;}
+
+  .wrap{padding:18px 26px 60px;max-width:1180px;margin:0 auto;}
+  .banner{display:flex;align-items:center;gap:10px;border-radius:12px;padding:11px 16px;font-size:13px;font-weight:500;margin-bottom:16px;}
+  .banner.ok{background:var(--green-bg);color:var(--green);}
+  .banner.warn{background:var(--amber-bg);color:var(--amber);}
+  .banner.err{background:var(--red-bg);color:var(--red);}
+  .banner code{background:rgba(0,0,0,.06);padding:1px 6px;border-radius:5px;font-size:12px;}
+
+  /* KPI cards */
+  .scoreboard{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px;}
+  .stat-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:15px 17px;}
+  .stat-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px;}
+  .stat-value{font-size:26px;font-weight:800;line-height:1;letter-spacing:-.02em;}
+  .stat-value.purple{color:var(--purple);}
+  .stat-sub{font-size:11.5px;color:var(--muted);font-weight:600;margin-top:6px;}
+
+  /* legend */
+  .legend{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;}
+  .legend span{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;font-weight:600;}
+  .legend i{width:11px;height:11px;border-radius:3px;display:inline-block;}
+
+  /* location cards (each city, certs stacked underneath) */
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(308px,1fr));gap:14px;}
+  .lcard{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:15px 17px;transition:box-shadow .15s,transform .15s;}
+  .lcard:hover{box-shadow:0 8px 22px -14px rgba(27,27,46,.4);transform:translateY(-1px);}
+  .lcard.zero{opacity:.6;}
+  .lc-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:11px;padding-bottom:10px;border-bottom:1px solid var(--border);}
+  .lc-city{font-size:15px;font-weight:800;letter-spacing:-.01em;}
+  .lc-city .tzbadge{font-size:9.5px;font-weight:800;color:var(--muted);margin-left:6px;text-transform:uppercase;letter-spacing:.04em;}
+  .lc-total{font-size:12px;font-weight:700;color:var(--muted);white-space:nowrap;}
+  .lc-total b{color:var(--ink);font-size:16px;margin-right:3px;}
+  .crow{display:grid;grid-template-columns:108px 1fr 26px;align-items:center;gap:11px;padding:5px 0;}
+  .crow .cname{font-size:12.5px;font-weight:700;display:flex;align-items:center;gap:7px;}
+  .crow .cname i{width:9px;height:9px;border-radius:3px;flex-shrink:0;}
+  .crow .ctrack{display:block;height:8px;border-radius:5px;background:var(--bg);overflow:hidden;}
+  .crow .cfill{display:block;height:100%;border-radius:5px;}
+  .crow .cnum{font-size:13.5px;font-weight:800;text-align:right;font-variant-numeric:tabular-nums;}
+  .crow.zero .cname,.crow.zero .cnum{color:#C9C9D4;}
+  .crow.zero .cname i{opacity:.35;}
+  .lc-empty{font-size:12px;color:var(--muted);font-weight:600;padding:4px 0 2px;}
+
+  /* trend strip */
+  h2{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:24px 0 10px;}
+  .trend{display:flex;gap:8px;flex-wrap:wrap;}
+  .mchip{background:var(--card);border:1px solid var(--border);border-radius:11px;padding:9px 13px;cursor:pointer;min-width:96px;transition:border-color .15s,box-shadow .15s;}
+  .mchip:hover{border-color:var(--purple);box-shadow:0 6px 16px -10px rgba(109,59,245,.5);}
+  .mchip.active{border-color:var(--purple);box-shadow:0 0 0 1px var(--purple);background:var(--purple-dim-2);}
+  .mchip .mc-m{font-size:11.5px;font-weight:700;color:var(--muted);}
+  .mchip .mc-n{font-size:20px;font-weight:800;letter-spacing:-.01em;margin-top:2px;}
+  .mchip .mc-s{font-size:10.5px;color:var(--muted);font-weight:600;}
+
+  .empty-note{padding:40px 20px;text-align:center;color:var(--muted);font-size:13.5px;font-weight:600;}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="logo-icon">+</div>
+    <div><h1>Certifications by Location</h1><p>What sold at each of the 12 locations — monthly total</p></div>
+  </div>
+  <div class="controls">
+    <button class="icon-btn" id="m-prev">‹</button>
+    <span class="mlabel" id="m-label">—</span>
+    <button class="icon-btn" id="m-next">›</button>
+    <button class="icon-btn" id="m-today" style="width:auto;padding:0 10px;font-size:12px;font-weight:700;">This month</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <div id="banner" class="banner warn">Loading bookings from Google Calendar…</div>
+
+  <div class="scoreboard">
+    <div class="stat-card"><div class="stat-label">Bookings this month</div><div class="stat-value purple" id="k-total">0</div><div class="stat-sub" id="k-total-sub">across all locations</div></div>
+    <div class="stat-card"><div class="stat-label">Top location</div><div class="stat-value" id="k-loc" style="font-size:20px;">—</div><div class="stat-sub" id="k-loc-sub">&nbsp;</div></div>
+    <div class="stat-card"><div class="stat-label">Top certification</div><div class="stat-value" id="k-cert" style="font-size:20px;">—</div><div class="stat-sub" id="k-cert-sub">&nbsp;</div></div>
+    <div class="stat-card"><div class="stat-label">Active locations</div><div class="stat-value" id="k-active">0</div><div class="stat-sub">of 12 with bookings</div></div>
+  </div>
+
+  <div class="legend" id="legend"></div>
+
+  <div class="board" id="board"></div>
+
+  <h2>Bookings by month — current &amp; upcoming</h2>
+  <div class="trend" id="trend"></div>
+</div>
+
+<script>
+/* ============================================================
+   CONFIG — same live Google Calendar as the master schedule.
+   ============================================================ */
+const CONFIG = {
+  GCAL_API_KEY: 'AIzaSyC_TFebAKiiw97ZRl3pjA75pC9vt-23r7Y',
+  GCAL_ID: 'cprsyndicate@gmail.com',
+  MONTHS_AHEAD: 18,   // how far into the future to pull bookings
+};
+
+/* ---- 12 locations -> timezone (Arizona = no DST) ---- */
+const LOC_TZ = {
+  'Manhattan':'America/New_York','Philadelphia':'America/New_York','Virginia Beach':'America/New_York',
+  'Columbus':'America/New_York','Atlanta':'America/New_York','Indianapolis':'America/New_York',
+  'Houston':'America/Chicago',
+  'Long Beach':'America/Los_Angeles','Los Angeles (DTLA)':'America/Los_Angeles',
+  'San Francisco':'America/Los_Angeles','Pasadena':'America/Los_Angeles',
+  'Tempe':'America/Phoenix',
+};
+const LOCATIONS = Object.keys(LOC_TZ);
+const TZ_SHORT = {'America/New_York':'ET','America/Chicago':'CT','America/Phoenix':'MT','America/Los_Angeles':'PT'};
+
+/* aliases seen in event titles -> canonical location */
+const LOC_ALIAS = {'DTLA':'Los Angeles (DTLA)','Los Angeles':'Los Angeles (DTLA)','LA':'Los Angeles (DTLA)','LA (DTLA)':'Los Angeles (DTLA)'};
+function normLoc(l){ l=(l||'').trim(); return LOC_ALIAS[l]||l; }
+
+/* ---- certification categories (order = column order & match priority) ---- */
+const CERTS = [
+  {key:'bls',        label:'BLS',                 color:'var(--bls)',   bg:'var(--bls-bg)'},
+  {key:'rcfa',       label:'Red Cross First Aid', color:'var(--rc)',    bg:'var(--rc-bg)'},
+  {key:'heartsaver', label:'Heartsaver',          color:'var(--hs)',    bg:'var(--hs-bg)'},
+  {key:'acls',       label:'ACLS',                color:'var(--acls)',  bg:'var(--acls-bg)'},
+  {key:'pals',       label:'PALS',                color:'var(--pals)',  bg:'var(--pals-bg)'},
+  {key:'other',      label:'Other',               color:'var(--other)', bg:'var(--other-bg)'},
+];
+const CERT_BY_KEY = Object.fromEntries(CERTS.map(c=>[c.key,c]));
+/* check heartsaver BEFORE red cross — "Heartsaver First Aid" contains "first aid" */
+function certKey(text=''){
+  const t=text.toLowerCase();
+  if(t.includes('bls')) return 'bls';
+  if(t.includes('pals')) return 'pals';
+  if(t.includes('acls')) return 'acls';
+  if(t.includes('heartsaver')) return 'heartsaver';
+  if(t.includes('red cross')||t.includes('redcross')||/\bfirst aid\b/.test(t)||t.includes('rcfa')||t.includes('arc')) return 'rcfa';
+  return 'other';
+}
+
+/* ---- parse a Google event title "Location — Student · Course" ---- */
+function parseTitle(summary=''){
+  const m = summary.match(/^\s*(.+?)\s*[—–-]\s*(.*)$/);
+  let location = summary.trim(), rest = '';
+  if(m){ location=m[1].trim(); rest=m[2].trim(); }
+  const cm = rest.match(/(red cross[^·\-—]*|heartsaver[^·\-—]*|bls[^·\-—]*|acls[^·\-—]*|pals[^·\-—]*|first aid[^·\-—]*)/i);
+  let course = cm ? cm[0].trim() : '';
+  let student = rest;
+  if(cm) student = rest.slice(0, cm.index).replace(/[·\-—\s]+$/,'').trim();
+  else { const dot = rest.split(/\s*·\s*/); if(dot.length>1){ student=dot[0].trim(); course=dot.slice(1).join(' · ').trim(); } }
+  return { location, student, course };
+}
+
+/* ============================================================
+   STATE
+   ============================================================ */
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+let allEvents = [];               // every current/future booking pulled
+let monthIndex = {};              // 'YYYY-MM' -> [events]
+let curKey = monthKeyNow();       // selected month
+let liveOK = false;
+
+function monthKeyNow(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+function monthKeyInTz(date, tz){
+  const p={}; new Intl.DateTimeFormat('en-CA',{timeZone:tz,year:'numeric',month:'2-digit'}).formatToParts(date).forEach(x=>p[x.type]=x.value);
+  return p.year+'-'+p.month;
+}
+function keyToLabel(k){ const [y,m]=k.split('-'); return MONTHS[+m-1]+' '+y; }
+function keyToShort(k){ const [y,m]=k.split('-'); return MONTHS[+m-1].slice(0,3)+" '"+String(y).slice(2); }
+function addMonthKey(k, n){ let [y,m]=k.split('-').map(Number); const idx=(y*12+(m-1))+n; return Math.floor(idx/12)+'-'+String(idx%12+1).padStart(2,'0'); }
+
+/* ============================================================
+   FETCH (once) — current month start through MONTHS_AHEAD
+   ============================================================ */
+async function fetchEvents(){
+  if(!CONFIG.GCAL_API_KEY || !CONFIG.GCAL_ID) return {ok:false, reason:'unconfigured'};
+  const now=new Date();
+  const timeMin=new Date(now.getFullYear(), now.getMonth(), 1);                       // start of current month
+  const timeMax=new Date(now.getFullYear(), now.getMonth()+CONFIG.MONTHS_AHEAD, 1);   // N months out
+  const url='https://www.googleapis.com/calendar/v3/calendars/'+encodeURIComponent(CONFIG.GCAL_ID)+'/events'
+    +'?key='+CONFIG.GCAL_API_KEY+'&singleEvents=true&orderBy=startTime&maxResults=2500'
+    +'&timeMin='+encodeURIComponent(timeMin.toISOString())+'&timeMax='+encodeURIComponent(timeMax.toISOString());
+  try{
+    const res=await fetch(url);
+    if(!res.ok){ const b=await res.json().catch(()=>({})); return {ok:false, reason:(b.error&&b.error.message)||('HTTP '+res.status)}; }
+    const data=await res.json();
+    const evs=(data.items||[]).filter(e=>e.start&&e.start.dateTime).map(e=>{
+      const p=parseTitle(e.summary||'');
+      const location=normLoc(p.location);
+      const tz=LOC_TZ[location]||'America/New_York';
+      const start=new Date(e.start.dateTime);
+      return { start, location, student:p.student, course:p.course, cert:certKey(p.course||e.summary||''), tz };
+    });
+    return {ok:true, events:evs};
+  }catch(err){ return {ok:false, reason:err.message}; }
+}
+
+/* small demo set if calendar is unreachable, so the layout still reads */
+function demoEvents(){
+  const k=monthKeyNow(), k1=addMonthKey(k,1);
+  const mk=(key,day)=> new Date(+key.split('-')[0], +key.split('-')[1]-1, day, 15, 0, 0);
+  const raw=[
+    [k,'Columbus','Red Cross First Aid'],[k,'Columbus','Red Cross First Aid'],[k,'Columbus','BLS Provider'],
+    [k,'Manhattan','BLS Provider'],[k,'Manhattan','Heartsaver'],[k,'San Francisco','Red Cross First Aid'],
+    [k,'San Francisco','Red Cross First Aid'],[k,'Tempe','Red Cross First Aid'],[k,'Tempe','BLS Provider'],
+    [k,'Houston','Red Cross First Aid'],[k,'Pasadena','Heartsaver'],[k,'Atlanta','BLS Provider'],
+    [k1,'Manhattan','BLS Provider'],[k1,'San Francisco','Red Cross First Aid'],[k1,'Long Beach','Heartsaver'],
+  ];
+  return raw.map(([key,loc,course],i)=>{
+    const location=normLoc(loc);
+    return { start:mk(key,(i%26)+1), location, student:'Student '+(i+1), course, cert:certKey(course), tz:LOC_TZ[location]||'America/New_York' };
+  });
+}
+
+/* ============================================================
+   INDEX + RENDER
+   ============================================================ */
+function buildIndex(){
+  monthIndex={};
+  const floor=monthKeyNow();   // we only pulled current+future; a tz boundary can read as the prior month — keep it visible
+  allEvents.forEach(e=>{ let k=monthKeyInTz(e.start, e.tz); if(k<floor) k=floor; (monthIndex[k]=monthIndex[k]||[]).push(e); });
+}
+
+/* which cert columns to show: the 3 core ones always, plus any others that appear */
+function activeCertKeys(){
+  const present=new Set(['bls','rcfa','heartsaver']);
+  allEvents.forEach(e=>present.add(e.cert));
+  return CERTS.filter(c=>present.has(c.key)).map(c=>c.key);
+}
+
+function renderLegend(keys){
+  document.getElementById('legend').innerHTML = keys.map(k=>{
+    const c=CERT_BY_KEY[k]; return '<span><i style="background:'+c.color+'"></i>'+c.label+'</span>';
+  }).join('');
+}
+
+function render(){
+  document.getElementById('m-label').textContent = keyToLabel(curKey);
+  // can't go before the current month (we only pulled current + future)
+  document.getElementById('m-prev').disabled = (curKey<=monthKeyNow());
+
+  const keys = activeCertKeys();
+  renderLegend(keys);
+
+  const evs = monthIndex[curKey] || [];
+
+  // matrix: location -> {certKey:count, total}
+  const rows = LOCATIONS.map(loc=>({loc, tz:LOC_TZ[loc], counts:{}, total:0}));
+  const rowByLoc = Object.fromEntries(rows.map(r=>[r.loc,r]));
+  const colTotals = Object.fromEntries(keys.map(k=>[k,0]));
+  let unknown=null, grand=0;
+
+  evs.forEach(e=>{
+    let r=rowByLoc[e.location];
+    if(!r){ unknown=unknown||{loc:'Other locations',tz:null,counts:{},total:0}; r=unknown; }
+    const ck = keys.includes(e.cert)?e.cert:'other';
+    r.counts[ck]=(r.counts[ck]||0)+1; r.total++;
+    colTotals[ck]=(colTotals[ck]||0)+1; grand++;
+  });
+
+  const allRows = unknown ? rows.concat([unknown]) : rows;
+  allRows.sort((a,b)=> b.total-a.total || a.loc.localeCompare(b.loc));
+  // bars are comparable across cities: scale to the single biggest cert count this month
+  const maxCell = Math.max(1, ...allRows.flatMap(r=>keys.map(k=>r.counts[k]||0)));
+
+  // ---- city cards (each city, certs stacked underneath) ----
+  const board=document.getElementById('board');
+  if(!evs.length){
+    board.innerHTML='<div class="empty-note">No bookings on the calendar for '+keyToLabel(curKey)+' yet.</div>';
+  } else {
+    board.innerHTML='<div class="cards">'+allRows.map(r=>{
+      const zero=r.total===0;
+      const tz = r.tz?'<span class="tzbadge">'+TZ_SHORT[r.tz]+'</span>':'';
+      let inner;
+      if(zero){
+        inner='<div class="lc-empty">No bookings this month</div>';
+      } else {
+        inner=keys.map(k=>{
+          const n=r.counts[k]||0, c=CERT_BY_KEY[k];
+          const w=Math.round(n/maxCell*100);
+          return '<div class="crow'+(n?'':' zero')+'">'
+            + '<span class="cname"><i style="background:'+c.color+'"></i>'+c.label+'</span>'
+            + '<span class="ctrack"><span class="cfill" style="width:'+w+'%;background:'+c.color+'"></span></span>'
+            + '<span class="cnum">'+(n||'0')+'</span></div>';
+        }).join('');
+      }
+      return '<div class="lcard'+(zero?' zero':'')+'">'
+        + '<div class="lc-head"><span class="lc-city">'+esc(r.loc)+tz+'</span>'
+        + '<span class="lc-total"><b>'+r.total+'</b>total</span></div>'
+        + inner+'</div>';
+    }).join('')+'</div>';
+  }
+
+  // ---- KPIs ----
+  document.getElementById('k-total').textContent = grand;
+  document.getElementById('k-total-sub').textContent = liveOK ? 'live from Google Calendar' : 'demo data';
+  const topLoc = allRows.filter(r=>r.total>0)[0];
+  document.getElementById('k-loc').textContent = topLoc ? topLoc.loc : '—';
+  document.getElementById('k-loc-sub').textContent = topLoc ? topLoc.total+' bookings' : ' ';
+  let topCert=null,topCertN=-1; keys.forEach(k=>{ if((colTotals[k]||0)>topCertN){topCertN=colTotals[k]||0;topCert=k;} });
+  document.getElementById('k-cert').textContent = (topCert&&topCertN>0) ? CERT_BY_KEY[topCert].label : '—';
+  document.getElementById('k-cert-sub').textContent = (topCert&&topCertN>0) ? topCertN+' sold' : ' ';
+  document.getElementById('k-active').textContent = rows.filter(r=>r.total>0).length;
+
+  renderTrend();
+}
+
+function renderTrend(){
+  const trend=document.getElementById('trend');
+  const start=monthKeyNow();
+  let html='';
+  for(let i=0;i<CONFIG.MONTHS_AHEAD;i++){
+    const k=addMonthKey(start,i);
+    const n=(monthIndex[k]||[]).length;
+    // stop after the last month that actually has data (keep current month even if empty)
+    if(i>0 && n===0){
+      let future=false; for(let j=i;j<CONFIG.MONTHS_AHEAD;j++){ if((monthIndex[addMonthKey(start,j)]||[]).length){future=true;break;} }
+      if(!future) break;
+    }
+    html+='<div class="mchip'+(k===curKey?' active':'')+'" data-k="'+k+'">'
+      + '<div class="mc-m">'+keyToShort(k)+'</div>'
+      + '<div class="mc-n">'+n+'</div>'
+      + '<div class="mc-s">booking'+(n===1?'':'s')+'</div></div>';
+  }
+  trend.innerHTML=html;
+  trend.querySelectorAll('.mchip').forEach(c=>c.addEventListener('click',()=>{ curKey=c.dataset.k; render(); }));
+}
+
+function esc(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+/* ============================================================
+   WIRING
+   ============================================================ */
+document.getElementById('m-prev').addEventListener('click', ()=>{ if(curKey>monthKeyNow()){ curKey=addMonthKey(curKey,-1); render(); } });
+document.getElementById('m-next').addEventListener('click', ()=>{ curKey=addMonthKey(curKey,1); render(); });
+document.getElementById('m-today').addEventListener('click', ()=>{ curKey=monthKeyNow(); render(); });
+if(new URLSearchParams(location.search).get('embed')) document.body.classList.add('embed');
+
+(async function init(){
+  const banner=document.getElementById('banner');
+  const res=await fetchEvents();
+  if(res.ok){
+    allEvents=res.events; liveOK=true;
+    banner.className='banner ok';
+    banner.innerHTML='🟢 Live — '+allEvents.length+' current &amp; upcoming bookings pulled from Google Calendar.';
+  } else if(res.reason==='unconfigured'){
+    allEvents=demoEvents();
+    banner.className='banner warn';
+    banner.innerHTML='⚠️ <b>Demo data.</b> Paste your <code>GCAL_API_KEY</code> + <code>GCAL_ID</code> in the CONFIG block to go live.';
+  } else {
+    allEvents=demoEvents();
+    banner.className='banner err';
+    banner.innerHTML='🔴 Google Calendar error ('+esc(res.reason)+'). Showing demo data.';
+  }
+  buildIndex();
+  render();
+})();
+</script>
+</body>
+</html>
