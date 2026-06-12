@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CPR Syndicate — Automations</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  :root{
+    --purple:#6D3BF5;--purple-2:#7C3AED;--purple-dim:#EEEAFE;--purple-dim-2:#F4F1FF;
+    --bg:#F5F5FA;--card:#FFF;--ink:#1B1B2E;--muted:#8A8A99;--border:#E6E6F0;
+    --green:#16A34A;--green-bg:#F0FDF4;--amber:#D97706;--amber-bg:#FFFBEB;--red:#EF4444;--red-bg:#FEF2F2;--slate:#64748B;--slate-bg:#F1F5F9;
+  }
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,sans-serif;background:var(--bg);color:var(--ink);}
+
+  .topbar{background:var(--card);border-bottom:1px solid var(--border);padding:14px 26px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;position:sticky;top:0;z-index:30;}
+  body.embed .brand{display:none;}
+  body.embed .topbar{justify-content:flex-end;padding:12px 22px;}
+  .brand{display:flex;align-items:center;gap:11px;}
+  .logo-icon{width:34px;height:34px;background:linear-gradient(135deg,var(--purple-2),var(--purple));border-radius:9px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;font-weight:700;}
+  .brand h1{font-size:17px;font-weight:800;letter-spacing:-.02em;}
+  .brand p{font-size:12px;color:var(--muted);}
+  .topnote{font-size:12px;color:var(--muted);font-weight:600;display:flex;align-items:center;gap:7px;}
+  .pulse{width:9px;height:9px;border-radius:50%;background:var(--green);box-shadow:0 0 0 0 rgba(22,163,74,.5);animation:pulse 2s infinite;}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(22,163,74,.5);}70%{box-shadow:0 0 0 7px rgba(22,163,74,0);}100%{box-shadow:0 0 0 0 rgba(22,163,74,0);}}
+
+  .wrap{padding:20px 26px 60px;max-width:1180px;margin:0 auto;}
+
+  .scoreboard{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;}
+  .stat-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:15px 17px;}
+  .stat-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px;}
+  .stat-value{font-size:26px;font-weight:800;line-height:1;letter-spacing:-.02em;}
+  .stat-value.green{color:var(--green);}
+  .stat-sub{font-size:11.5px;color:var(--muted);font-weight:600;margin-top:6px;}
+
+  h2{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:26px 0 12px;}
+  h2:first-of-type{margin-top:6px;}
+
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px;}
+  .acard{background:var(--card);border:1px solid var(--border);border-radius:15px;padding:16px 18px;display:flex;flex-direction:column;gap:11px;transition:box-shadow .15s,transform .15s;}
+  .acard:hover{box-shadow:0 10px 26px -16px rgba(27,27,46,.4);transform:translateY(-1px);}
+  .ac-top{display:flex;align-items:flex-start;gap:12px;}
+  .ac-ico{width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:21px;flex-shrink:0;background:var(--purple-dim);}
+  .ac-head{flex:1;min-width:0;}
+  .ac-title{font-size:14.5px;font-weight:800;letter-spacing:-.01em;}
+  .ac-desc{font-size:12.5px;color:var(--muted);line-height:1.45;margin-top:3px;}
+  .status{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;padding:3px 9px;border-radius:100px;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;}
+  .status i{width:6px;height:6px;border-radius:50%;}
+  .status.live{background:var(--green-bg);color:var(--green);} .status.live i{background:var(--green);}
+  .status.active{background:var(--purple-dim);color:var(--purple);} .status.active i{background:var(--purple);}
+  .status.demo{background:var(--amber-bg);color:var(--amber);} .status.demo i{background:var(--amber);}
+  .status.off{background:var(--slate-bg);color:var(--slate);} .status.off i{background:var(--slate);}
+  .status.err{background:var(--red-bg);color:var(--red);} .status.err i{background:var(--red);}
+
+  .ac-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;border-top:1px solid var(--border);padding-top:11px;margin-top:auto;}
+  .ac-meta{font-size:11.5px;color:var(--muted);font-weight:600;display:flex;flex-wrap:wrap;gap:5px 12px;}
+  .ac-meta b{color:var(--ink);font-weight:800;}
+  .toggle{width:38px;height:22px;border-radius:100px;background:var(--purple);position:relative;flex-shrink:0;cursor:pointer;transition:background .15s;}
+  .toggle::after{content:'';position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;transition:left .15s;box-shadow:0 1px 3px rgba(0,0,0,.25);}
+  .toggle.off{background:#CBD5E1;} .toggle.off::after{left:18px;}
+
+  .legend{display:flex;gap:16px;flex-wrap:wrap;margin:2px 0 4px;}
+  .legend .status{cursor:default;}
+  .legend small{font-size:11.5px;color:var(--muted);font-weight:600;align-self:center;}
+
+  .footnote{margin-top:26px;font-size:12px;color:var(--muted);line-height:1.6;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:13px 16px;}
+  .footnote b{color:var(--ink);}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="logo-icon">+</div>
+    <div><h1>Automations</h1><p>Everything the dashboard runs on autopilot</p></div>
+  </div>
+  <div class="topnote"><span class="pulse"></span><span id="sync-note">Checking Google Calendar…</span></div>
+</header>
+
+<div class="wrap">
+
+  <div class="scoreboard">
+    <div class="stat-card"><div class="stat-label">Automations active</div><div class="stat-value green" id="k-active">—</div><div class="stat-sub" id="k-active-sub">running now</div></div>
+    <div class="stat-card"><div class="stat-label">Live data source</div><div class="stat-value" style="font-size:18px;" id="k-source">Google Calendar</div><div class="stat-sub" id="k-source-sub">checking…</div></div>
+    <div class="stat-card"><div class="stat-label">Bookings synced</div><div class="stat-value" id="k-synced">—</div><div class="stat-sub">current + upcoming</div></div>
+    <div class="stat-card"><div class="stat-label">Manual steps</div><div class="stat-value">0</div><div class="stat-sub">fully hands-off</div></div>
+  </div>
+
+  <div class="legend">
+    <span class="status live"><i></i>Live</span><small>real data flowing now</small>
+    <span class="status active"><i></i>Active</span><small>logic runs automatically</small>
+    <span class="status demo"><i></i>Demo</span><small>wired, on sample data</small>
+  </div>
+
+  <h2>Data &amp; Sync</h2>
+  <div class="cards" id="cards-data"></div>
+
+  <h2>Scheduling</h2>
+  <div class="cards" id="cards-sched"></div>
+
+  <h2>Customer Lifecycle</h2>
+  <div class="cards" id="cards-life"></div>
+
+  <div class="footnote">
+    <b>How these run:</b> automations execute automatically inside the dashboard — the moment a page opens it pulls live bookings from Google Calendar and recomputes every view. Scheduling logic (instructor assignment, conflict detection, timezone math) runs on each load with no manual steps.
+    Items marked <b>Demo</b> are fully built and wired but currently run on sample data — they go live once connected to your booking/CRM feed.
+  </div>
+</div>
+
+<script>
+const CONFIG={ GCAL_API_KEY:'AIzaSyC_TFebAKiiw97ZRl3pjA75pC9vt-23r7Y', GCAL_ID:'cprsyndicate@gmail.com' };
+
+/* automation registry — grouped, rendered as cards */
+const AUTOMATIONS = {
+  data:[
+    { ico:'📅', bg:'var(--green-bg)', title:'Google Calendar Sync', status:'live',
+      desc:'Pulls every current & upcoming booking straight from your Google Calendar — the single source of truth feeding Schedule, Locations & Analytics.',
+      meta:[['Source','cprsyndicate@gmail.com'],['Refresh','on every page load']] },
+    { ico:'📊', bg:'var(--purple-dim)', title:'Analytics Rollups', status:'active',
+      desc:'Auto-aggregates bookings by certification, location, day of week and start hour — no spreadsheets, recalculated live each month.',
+      meta:[['Updates','live'],['Breakdowns','5']] },
+    { ico:'🏷️', bg:'#FFE9EE', title:'Certification Tagging', status:'active',
+      desc:'Reads each booking title and classifies it as BLS, Red Cross First Aid, Heartsaver, ACLS or PALS — even with messy title formats.',
+      meta:[['Categories','6'],['Handles','typo variants']] },
+  ],
+  sched:[
+    { ico:'🧑‍🏫', bg:'var(--purple-dim)', title:'Instructor Auto-Assignment', status:'active',
+      desc:'Assigns every session to a free, on-shift instructor (one class at a time) based on the roster windows — across all 12 locations.',
+      meta:[['Instructors','5'],['Rule','1 class at a time']] },
+    { ico:'⚠️', bg:'var(--amber-bg)', title:'Conflict Detection', status:'active',
+      desc:'Flags overlapping sessions when no instructor is free and suggests the nearest same-course open slot to reschedule into.',
+      meta:[['Scans','every load'],['Suggests','fixes']] },
+    { ico:'🌐', bg:'#E0F2FE', title:'Timezone Normalization', status:'active',
+      desc:'Plots all 12 locations on one clock and converts each class to ET/CT/MT/PT — Arizona handled with no daylight saving.',
+      meta:[['Zones','4'],['Locations','12']] },
+  ],
+  life:[
+    { ico:'🔄', bg:'var(--amber-bg)', title:'Renewal Cadence', status:'demo',
+      desc:'Tracks each customer toward cert expiry and queues reminder touches at 90 · 60 · 30 · 15 · 7 · day-of milestones.',
+      meta:[['Milestones','6'],['Window','90 days']] },
+    { ico:'🟡', bg:'var(--amber-bg)', title:'Lead Follow-up', status:'demo',
+      desc:'Moves pending leads through New → Followed Up → Last Chance and surfaces at-risk revenue so nothing goes cold.',
+      meta:[['Stages','5'],['Tracks','$ at risk']] },
+    { ico:'⏰', bg:'var(--amber-bg)', title:'Abandoned Checkout Recovery', status:'demo',
+      desc:'Catches pay-clicks that never finished and sends a personalized discount link to win the booking back.',
+      meta:[['Trigger','pay-click'],['Sends','discount link']] },
+  ],
+};
+
+function card(a){
+  const metaHtml = a.meta.map(([k,v])=>'<span>'+k+' <b>'+v+'</b></span>').join('');
+  return '<div class="acard" data-title="'+esc(a.title)+'">'
+    + '<div class="ac-top"><div class="ac-ico" style="background:'+a.bg+'">'+a.ico+'</div>'
+    + '<div class="ac-head"><div class="ac-title">'+esc(a.title)+'</div><div class="ac-desc">'+esc(a.desc)+'</div></div>'
+    + '<span class="status '+a.status+'" data-status="'+a.status+'"><i></i>'+a.status+'</span></div>'
+    + '<div class="ac-foot"><div class="ac-meta">'+metaHtml+'</div>'
+    + '<div class="toggle'+(a.status==='off'?' off':'')+'" title="Toggle (visual only)"></div></div>'
+    + '</div>';
+}
+function esc(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+function renderAll(){
+  document.getElementById('cards-data').innerHTML  = AUTOMATIONS.data.map(card).join('');
+  document.getElementById('cards-sched').innerHTML = AUTOMATIONS.sched.map(card).join('');
+  document.getElementById('cards-life').innerHTML  = AUTOMATIONS.life.map(card).join('');
+  // count active (live+active+demo all "running")
+  const all=[...AUTOMATIONS.data,...AUTOMATIONS.sched,...AUTOMATIONS.life];
+  document.getElementById('k-active').textContent = all.length;
+  document.getElementById('k-active-sub').textContent = all.filter(a=>a.status==='live'||a.status==='active').length+' live · '+all.filter(a=>a.status==='demo').length+' on sample data';
+  // visual toggles
+  document.querySelectorAll('.toggle').forEach(t=>t.addEventListener('click',()=>t.classList.toggle('off')));
+}
+
+/* live-ping Google Calendar so the sync card reflects reality */
+async function pingCalendar(){
+  const note=document.getElementById('sync-note');
+  const srcSub=document.getElementById('k-source-sub');
+  const synced=document.getElementById('k-synced');
+  try{
+    const now=new Date();
+    const tmin=new Date(now.getFullYear(),now.getMonth(),1);
+    const tmax=new Date(now.getFullYear(),now.getMonth()+18,1);
+    const url='https://www.googleapis.com/calendar/v3/calendars/'+encodeURIComponent(CONFIG.GCAL_ID)+'/events'
+      +'?key='+CONFIG.GCAL_API_KEY+'&singleEvents=true&maxResults=2500&timeMin='+tmin.toISOString()+'&timeMax='+tmax.toISOString();
+    const r=await fetch(url); if(!r.ok) throw new Error('HTTP '+r.status);
+    const d=await r.json();
+    const n=(d.items||[]).filter(e=>e.start&&e.start.dateTime).length;
+    note.textContent='Google Calendar connected · '+n+' bookings synced';
+    srcSub.textContent='✓ connected'; srcSub.style.color='var(--green)';
+    synced.textContent=n;
+  }catch(err){
+    document.querySelector('.pulse').style.background='var(--red)';
+    note.textContent='Calendar unreachable ('+err.message+')';
+    srcSub.textContent='✗ error'; srcSub.style.color='var(--red)';
+    synced.textContent='—';
+    // flip the sync card to an error state
+    const c=[...document.querySelectorAll('.acard')].find(x=>x.dataset.title==='Google Calendar Sync');
+    if(c){ const s=c.querySelector('.status'); s.className='status err'; s.innerHTML='<i></i>error'; }
+  }
+}
+
+if(new URLSearchParams(location.search).get('embed')) document.body.classList.add('embed');
+renderAll();
+pingCalendar();
+</script>
+</body>
+</html>
