@@ -693,7 +693,7 @@ function render(){
       + '<div class="who">'+esc(ev.student||'')+'</div>'
       + '<div class="loc-local">'+esc(ev.course||'')+' · '+fmtInTz(ev.start,ev.tz)+' local</div>';
     const opts = conflict ? suggestSlots(ev, busy) : null;
-    el.addEventListener('mouseenter', ()=> showPopover(el, ev, ii, opts, tz, sess));
+    el.addEventListener('mouseenter', ()=> showPopover(el, ev, ii, opts, tz, sess, daySessions, busy));
     el.addEventListener('mouseleave', hidePopover);
     cols[ev.zone].appendChild(el);
   });
@@ -754,7 +754,7 @@ function tzShort(tz){
 /* ---- hover popover (details + conflict solution) ---- */
 const popoverEl = document.createElement('div'); popoverEl.id='popover'; document.body.appendChild(popoverEl);
 function hidePopover(){ popoverEl.classList.remove('show'); }
-function showPopover(el, ev, ii, opts, tz, sess){
+function showPopover(el, ev, ii, opts, tz, sess, daySessions, busy){
   const conflict = ii < 0;
   let html = '<div class="po-head"><span class="po-dot" style="background:var(--z-'+ev.zone+')"></span>'+fmtInTz(ev.start,tz)+' · '+esc(ev.location)+'</div>'
     + '<div class="po-sub">'+esc(ev.student||'—')+'</div>'
@@ -767,8 +767,18 @@ function showPopover(el, ev, ii, opts, tz, sess){
   }
   if(conflict){
     html += '<div class="po-status bad">⚠️ Conflict — all instructors busy</div>';
-    if(opts && opts.length){
-      html += '<div class="po-fix"><div class="lbl">Reschedule options ('+opts.length+') · '+courseLabel(ev.course)+'</div>'
+    const selfCost = sess ? sess.members.length : 1;
+    const free = (sess && daySessions) ? cheapestFreeUp(sess, daySessions) : null;
+    if(free && free.cost < selfCost){
+      // cheaper to move a smaller class and free an instructor
+      const who = free.blockers.flatMap(b=>b.members.map(m=>esc(m.location)+(m.student?' · '+esc(m.student):''))).join(', ');
+      const bOpts = busy ? suggestSlots(free.blockers[0].members[0], busy) : [];
+      html += '<div class="po-fix" style="background:var(--green-bg)"><div class="lbl" style="color:var(--green)">✅ Smartest — move '+free.cost+' student'+(free.cost>1?'s':'')+' (not '+selfCost+')</div>'
+        + '<div class="po-opt" style="line-height:1.35">Reschedule <b>'+who+'</b> → frees '+esc(INSTRUCTORS[free.instr].name)+' to teach this</div>'
+        + bOpts.slice(0,3).map(o=>'<div class="po-opt">→ '+esc(free.blockers[0].members[0].location)+' to '+optLabel(o,tz)+'</div>').join('')
+        + '</div>';
+    } else if(opts && opts.length){
+      html += '<div class="po-fix"><div class="lbl">Reschedule this session ('+selfCost+' student'+(selfCost>1?'s':'')+') · '+courseLabel(ev.course)+'</div>'
         + opts.map(o=>'<div class="po-opt">'+optLabel(o,tz)+'</div>').join('')
         + '</div>';
     } else {
