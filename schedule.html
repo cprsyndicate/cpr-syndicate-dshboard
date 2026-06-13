@@ -394,6 +394,19 @@ function shiftsLabel(){
    session to a free on-shift instructor. A conflict (-1) only happens when a session
    (a distinct course/time) has no free instructor — e.g. a different cert overlapping. */
 function sessionKeyOf(ev){ return (courseKey(ev.course)||'?')+'@'+ev.start.getTime(); }
+/* first free on-shift instructor for a session, given current busy intervals (-1 if none) */
+function freeInstructorFor(s, busy){
+  const etH = etHourOf(s.start);
+  for(let i=0;i<INSTRUCTORS.length;i++){
+    if(!isAvailable(INSTRUCTORS[i], etH)) continue;
+    if(busy[i].some(([bs,be])=> bs<s.end && be>s.start)) continue;
+    return i;
+  }
+  return -1;
+}
+function placeSession(s, i, busy, assign){ s.instr=i; if(i>=0) busy[i].push([s.start,s.end]); s.members.forEach(ev=>assign.set(ev,i)); }
+function unplaceSession(s, busy, assign){ const a=busy[s.instr]; const idx=a.findIndex(([bs,be])=>+bs===+s.start&&+be===+s.end); if(idx>=0)a.splice(idx,1); s.instr=-1; s.members.forEach(ev=>assign.set(ev,-1)); }
+
 function assignInstructors(evs){
   const groups = new Map();
   evs.forEach(ev=>{
@@ -407,18 +420,34 @@ function assignInstructors(evs){
   const busy = INSTRUCTORS.map(()=>[]);            // [start,end] intervals per instructor
   const assign = new Map();      // event -> instructor index (-1 = conflict)
   const sessionOf = new Map();   // event -> its merged session
-  sessions.forEach(s=>{
-    const etH = etHourOf(s.start);
-    let chosen = -1;
-    for(let i=0;i<INSTRUCTORS.length;i++){
-      if(!isAvailable(INSTRUCTORS[i], etH)) continue;
-      if(busy[i].some(([bs,be])=> bs<s.end && be>s.start)) continue;   // already teaching a DIFFERENT session then
-      chosen = i; break;
+  sessions.forEach(s=>{ s.members.forEach(ev=>sessionOf.set(ev,s)); placeSession(s, freeInstructorFor(s,busy), busy, assign); });
+
+  /* REBALANCE — minimize students left in conflict.
+     If a conflicted session could be covered by displacing a SMALLER (fewer-student) class,
+     do the swap so the conflict lands on the class that disrupts the fewest students. */
+  let guard = 0;
+  while(guard++ < 200){
+    const confs = sessions.filter(s=> s.instr<0).sort((a,b)=> b.members.length-a.members.length);
+    let swapped = false;
+    for(const S of confs){
+      const etH = etHourOf(S.start);
+      let best = null;
+      for(let i=0;i<INSTRUCTORS.length;i++){
+        if(!isAvailable(INSTRUCTORS[i], etH)) continue;
+        const blockers = sessions.filter(x=> x.instr===i && x.start<S.end && x.end>S.start);
+        if(!blockers.length) continue;                       // instructor i is free (shouldn't happen for a conflict)
+        const cost = blockers.reduce((n,b)=>n+b.members.length,0);
+        if(cost < S.members.length && (!best || cost<best.cost)) best = { instr:i, blockers, cost };
+      }
+      if(best){
+        best.blockers.forEach(B=> unplaceSession(B, busy, assign));   // free instructor i
+        placeSession(S, best.instr, busy, assign);                    // cover the bigger class
+        best.blockers.forEach(B=>{ const j=freeInstructorFor(B,busy); if(j>=0) placeSession(B, j, busy, assign); }); // re-home displaced if possible
+        swapped = true; break;
+      }
     }
-    if(chosen>=0) busy[chosen].push([s.start, s.end]);
-    s.instr = chosen;
-    s.members.forEach(ev=>{ assign.set(ev, chosen); sessionOf.set(ev, s); });
-  });
+    if(!swapped) break;
+  }
   return { assign, busy, sessions, sessionOf };
 }
 /* the merged sessions covering a given set of events (deduped) */
