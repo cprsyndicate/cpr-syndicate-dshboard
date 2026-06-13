@@ -122,6 +122,8 @@
   .po-fix .lbl { font-size:9.5px; font-weight:800; text-transform:uppercase; letter-spacing:.06em; color:var(--purple); }
   .po-fix .val { font-size:12.5px; font-weight:700; margin-top:4px; color:var(--ink); line-height:1.4; }
   .po-opt { font-size:12px; font-weight:700; color:var(--ink); padding:5px 8px; margin-top:5px; background:var(--card); border-radius:7px; }
+  .cf-rec { font-size:11.5px; color:var(--ink); font-weight:600; margin:5px 0 4px; line-height:1.4; background:var(--green-bg); border-radius:8px; padding:6px 9px; }
+  .cf-rec b { font-weight:800; }
   .cf-opt { font-size:11.5px; color:var(--purple); font-weight:700; margin-top:3px; }
   .cf-more { font-size:10.5px; color:var(--muted); font-weight:600; margin-top:3px; }
 
@@ -483,23 +485,51 @@ function renderSplit(sessionList){
   });
   body.innerHTML = rows;
 }
-/* conflictSessions = merged sessions with no free instructor (one row each, listing every location in the Zoom) */
-function renderConflicts(conflictSessions, busy, tz){
+/* Of the on-shift instructors busy during S, find the one whose overlapping work
+   involves the FEWEST students to move — freeing them is the cheapest way to cover S. */
+function cheapestFreeUp(S, daySessions){
+  const etH = etHourOf(S.start);
+  let best = null;
+  for(let i=0;i<INSTRUCTORS.length;i++){
+    if(!isAvailable(INSTRUCTORS[i], etH)) continue;
+    const blockers = daySessions.filter(x=> x.instr===i && x.start<S.end && x.end>S.start);
+    if(!blockers.length) continue;                       // this instructor is actually free (shouldn't happen for a real conflict)
+    const cost = blockers.reduce((n,b)=>n+b.members.length,0);
+    if(!best || cost<best.cost) best = { instr:i, blockers, cost };
+  }
+  return best;
+}
+/* conflictSessions = merged sessions with no free instructor. Recommend the fix that
+   reschedules the FEWEST students — either move this session, or move a smaller class to free an instructor. */
+function renderConflicts(conflictSessions, daySessions, busy, tz){
   const body = document.getElementById('conflict-body');
   document.getElementById('conflict-title').textContent = 'Conflicts ('+conflictSessions.length+')';
   if(!conflictSessions.length){ body.innerHTML='<div class="split-hint" style="color:var(--green);font-weight:700">✓ No overlaps — everyone fits.</div>'; return; }
+  const slotLines = (sess) => {
+    const opts = suggestSlots(sess.members[0], busy);
+    if(!opts.length) return '<div class="cf-opt">No open same-course slot in the next 7 days.</div>';
+    return opts.slice(0,3).map(o=>'<div class="cf-opt">→ '+esc(sess.members[0].location)+' to '+optLabel(o,tz)+'</div>').join('')
+         + (opts.length>3 ? '<div class="cf-more">+'+(opts.length-3)+' more — hover the session</div>' : '');
+  };
   body.innerHTML = conflictSessions.slice().sort((a,b)=>a.start-b.start).map(s=>{
     const ev = s.members[0];
     const locs = s.members.map(m=>esc(m.location)).join(', ');
-    const opts = suggestSlots(ev, busy);
-    let fix;
-    if(opts.length){
-      fix = opts.slice(0,3).map(o=>'<div class="cf-opt">→ '+optLabel(o,tz)+'</div>').join('')
-          + (opts.length>3 ? '<div class="cf-more">+'+(opts.length-3)+' more — hover the session</div>' : '');
-    } else fix = '<div class="cf-opt">No same-course slot in the next 7 days.</div>';
+    const selfCost = s.members.length;
+    const free = cheapestFreeUp(s, daySessions);
+    let rec, fix;
+    if(free && free.cost < selfCost){
+      // cheaper to move a smaller class and free an instructor for this one
+      const who = free.blockers.flatMap(b=>b.members.map(m=>esc(m.location)+(m.student?' · '+esc(m.student):''))).join(', ');
+      rec = '<div class="cf-rec">✅ Move <b>'+free.cost+' student'+(free.cost>1?'s':'')+'</b> (not '+selfCost+'): reschedule '+who
+          + ' → frees <b>'+esc(INSTRUCTORS[free.instr].name)+'</b> to teach this slot</div>';
+      fix = free.blockers.map(b=>slotLines(b)).join('');
+    } else {
+      rec = '<div class="cf-rec">Reschedule this session ('+selfCost+' student'+(selfCost>1?'s':'')+')</div>';
+      fix = slotLines(s);
+    }
     return '<div class="conflict-row"><div class="cf-when">'+fmtInTz(ev.start,tz)+' · '+locs+'</div>'
-         + '<div class="cf-who">'+esc(ev.course||'')+' · '+s.members.length+' booking'+(s.members.length===1?'':'s')+'</div>'
-         + fix+'</div>';
+         + '<div class="cf-who">'+esc(ev.course||'')+' · '+selfCost+' booking'+(selfCost===1?'':'s')+'</div>'
+         + rec + fix + '</div>';
   }).join('');
 }
 
@@ -699,7 +729,7 @@ function render(){
   document.getElementById('k-peak').textContent = peak;
   const ko = document.getElementById('k-over'); ko.textContent = cfSessions.length?('Yes — '+cfSessions.length):'No'; ko.style.color = cfSessions.length?'var(--red)':'var(--green)';
 
-  renderConflicts(cfSessions, busy, tz);
+  renderConflicts(cfSessions, daySessions, busy, tz);
   renderSplit(daySessions);
   renderConverter();
 }
