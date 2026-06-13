@@ -42,8 +42,10 @@
   .banner.err { background:var(--red-bg); color:var(--red); }
   .banner code { background:rgba(0,0,0,.06); padding:1px 6px; border-radius:5px; font-size:12px; }
 
-  .layout { display:grid; grid-template-columns:1fr 300px; gap:20px; align-items:start; }
-  @media (max-width:980px){ .layout { grid-template-columns:1fr; } }
+  .layout { display:grid; grid-template-columns:minmax(0,1fr) 300px; gap:20px; align-items:start; }
+  /* stack the side panel below the calendar on anything narrower than a wide desktop,
+     so the Converter / Conflicts / Instructor panel is always fully visible (never clipped at the right edge) */
+  @media (max-width:1280px){ .layout { grid-template-columns:minmax(0,1fr); } .panel { position:static; } }
 
   .legend { display:flex; gap:16px; flex-wrap:wrap; margin-bottom:14px; }
   .legend span { font-size:12px; color:var(--muted); display:flex; align-items:center; gap:6px; font-weight:600; }
@@ -51,12 +53,12 @@
 
   /* timeline */
   .board { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:0; overflow:hidden; }
-  .board-head { display:grid; grid-template-columns:64px repeat(4,1fr) 70px; border-bottom:1px solid var(--border); background:var(--bg); }
+  .board-head { display:grid; grid-template-columns:64px repeat(4,minmax(0,1fr)) 70px; border-bottom:1px solid var(--border); background:var(--bg); }
   .board-head > div { padding:11px 8px; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; text-align:center; color:var(--muted); }
   .board-head .zhead { border-left:1px solid var(--border); }
   .board-head .zhead small { display:block; font-weight:600; font-size:9.5px; text-transform:none; letter-spacing:0; margin-top:1px; }
   .timeline { position:relative; }
-  .tl-grid { display:grid; grid-template-columns:64px repeat(4,1fr) 70px; position:relative; }
+  .tl-grid { display:grid; grid-template-columns:64px repeat(4,minmax(0,1fr)) 70px; position:relative; }
   .tl-axis, .tl-col, .tl-load { position:relative; }
   .tl-col, .tl-load { border-left:1px solid var(--border); }
   .hourline { position:absolute; left:0; right:0; border-top:1px solid #F0F0F6; }
@@ -79,9 +81,9 @@
   .load-over { background:var(--red-bg); color:var(--red); }
 
   /* month grid */
-  .mgrid { display:grid; grid-template-columns:repeat(7,1fr); gap:6px; padding:14px; }
+  .mgrid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:6px; padding:14px; }
   .mdow { font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); text-align:center; padding:4px 0; }
-  .mcell { background:var(--bg); border:1px solid var(--border); border-radius:10px; min-height:104px; padding:7px; cursor:pointer; display:flex; flex-direction:column; gap:3px; transition:border-color .15s, box-shadow .15s; }
+  .mcell { background:var(--bg); border:1px solid var(--border); border-radius:10px; min-height:104px; min-width:0; padding:7px; cursor:pointer; display:flex; flex-direction:column; gap:3px; transition:border-color .15s, box-shadow .15s; }
   .mcell:hover { border-color:var(--purple); box-shadow:0 6px 16px -9px rgba(109,59,245,.55); }
   .mcell.empty { background:transparent; border:none; cursor:default; }
   .mcell.today { border-color:var(--purple); box-shadow:0 0 0 1px var(--purple); }
