@@ -186,7 +186,7 @@
     <span><i style="background:var(--z-ct)"></i> Central</span>
     <span><i style="background:var(--z-mt)"></i> Mountain (AZ)</span>
     <span><i style="background:var(--z-pt)"></i> Pacific</span>
-    <span style="margin-left:auto">Right rail = sessions running at once vs instructor capacity (10 / instructor)</span>
+    <span style="margin-left:auto">Right rail = Zoom sessions running at once (same cert + time = 1 session, any # of locations) vs instructors on shift</span>
   </div>
 
   <div class="layout">
@@ -300,6 +300,7 @@ let refDay = new Date(); // current month/day; live data fills it in
 let viewMode = 'month';  // 'month' (default) or 'day' (zoomed in)
 let events = [];         // events shown in the current view
 let weekEvents = [];     // current day + next 6 days, for cross-day reschedule options
+let viewSessions = [];   // merged (same-cert/same-time) sessions for the current view
 
 async function fetchEvents(dayStart, dayEnd){
   if (!CONFIG.GCAL_API_KEY || !CONFIG.GCAL_ID) return { ok:false, reason:'unconfigured' };
@@ -385,25 +386,41 @@ function shiftsLabel(){
   return Object.entries(g).map(([k,n])=>{ const [a,b]=k.split('-'); return n+' ('+fmtH(+a)+'–'+fmtH(+b)+' ET)'; }).join(' · ');
 }
 
-/* one-session-at-a-time, shift-aware assignment.
-   Each session -> a free instructor on shift at its start. None free -> conflict (-1). */
+/* Instruction is remote (Zoom): ONE instructor can teach the SAME certification to
+   multiple locations at the SAME time — it's a single Zoom room. So we first merge
+   every (same course + same start instant) booking into ONE session, then assign each
+   session to a free on-shift instructor. A conflict (-1) only happens when a session
+   (a distinct course/time) has no free instructor — e.g. a different cert overlapping. */
+function sessionKeyOf(ev){ return (courseKey(ev.course)||'?')+'@'+ev.start.getTime(); }
 function assignInstructors(evs){
-  const sorted = [...evs].sort((a,b)=> a.start-b.start || a.end-b.end);
-  const assign = new Map();
+  const groups = new Map();
+  evs.forEach(ev=>{
+    const k = sessionKeyOf(ev);
+    let g = groups.get(k);
+    if(!g){ g = { start:ev.start, end:ev.end, cert:courseKey(ev.course), members:[] }; groups.set(k,g); }
+    g.members.push(ev);
+    if(ev.end > g.end) g.end = ev.end;     // session runs as long as its longest booking
+  });
+  const sessions = [...groups.values()].sort((a,b)=> a.start-b.start || a.end-b.end);
   const busy = INSTRUCTORS.map(()=>[]);            // [start,end] intervals per instructor
-  sorted.forEach(ev=>{
-    const etH = etHourOf(ev.start);
+  const assign = new Map();      // event -> instructor index (-1 = conflict)
+  const sessionOf = new Map();   // event -> its merged session
+  sessions.forEach(s=>{
+    const etH = etHourOf(s.start);
     let chosen = -1;
     for(let i=0;i<INSTRUCTORS.length;i++){
       if(!isAvailable(INSTRUCTORS[i], etH)) continue;
-      if(busy[i].some(([s,e])=> s<ev.end && e>ev.start)) continue;   // already teaching then
+      if(busy[i].some(([bs,be])=> bs<s.end && be>s.start)) continue;   // already teaching a DIFFERENT session then
       chosen = i; break;
     }
-    if(chosen>=0) busy[chosen].push([ev.start, ev.end]);
-    assign.set(ev, chosen);
+    if(chosen>=0) busy[chosen].push([s.start, s.end]);
+    s.instr = chosen;
+    s.members.forEach(ev=>{ assign.set(ev, chosen); sessionOf.set(ev, s); });
   });
-  return { assign, busy };
+  return { assign, busy, sessions, sessionOf };
 }
+/* the merged sessions covering a given set of events (deduped) */
+function sessionsFor(evs, sessionOf){ return [...new Set(evs.map(e=>sessionOf.get(e)).filter(Boolean))]; }
 /* standard daily slots per course (LOCAL hours, from the M–F template).
    Classes can't mix, so a reschedule must land on a slot of the SAME course. */
 const COURSE_SLOTS = {
@@ -453,31 +470,35 @@ function optLabel(o, tz){
   const day = o.dayOff===0 ? 'Today' : new Intl.DateTimeFormat('en-US',{timeZone:tz,weekday:'short',month:'numeric',day:'numeric'}).format(o.time);
   return day+' · '+fmtInTz(o.time,tz)+' · '+esc(INSTRUCTORS[o.instr].name);
 }
-function renderSplit(assign, evs){
+/* sessionList = merged sessions for the day; count distinct Zoom sessions per instructor */
+function renderSplit(sessionList){
   const body = document.getElementById('split-body');
   let rows = '';
   INSTRUCTORS.forEach((ins,i)=>{
-    const count = evs.filter(e=> assign.get(e)===i).length;
+    const count = sessionList.filter(s=> s.instr===i).length;
     const wins = ins.windows.map(w=>fmtH(w[0])+'–'+fmtH(w[1])).join(', ');
     rows += '<div class="split-row"><span class="split-name"><span class="split-dot" style="background:'+ins.color+'">'+ins.initials+'</span>'+esc(ins.name)+'</span>'
-         + '<span class="split-meta">'+count+' sessions</span></div>'
+         + '<span class="split-meta">'+count+' session'+(count===1?'':'s')+'</span></div>'
          + '<div class="split-hint" style="margin:-4px 0 6px 24px">on '+wins+' ET</div>';
   });
   body.innerHTML = rows;
 }
-function renderConflicts(conflicts, busy, tz){
+/* conflictSessions = merged sessions with no free instructor (one row each, listing every location in the Zoom) */
+function renderConflicts(conflictSessions, busy, tz){
   const body = document.getElementById('conflict-body');
-  document.getElementById('conflict-title').textContent = 'Conflicts ('+conflicts.length+')';
-  if(!conflicts.length){ body.innerHTML='<div class="split-hint" style="color:var(--green);font-weight:700">✓ No overlaps — everyone fits.</div>'; return; }
-  body.innerHTML = conflicts.slice().sort((a,b)=>a.start-b.start).map(ev=>{
+  document.getElementById('conflict-title').textContent = 'Conflicts ('+conflictSessions.length+')';
+  if(!conflictSessions.length){ body.innerHTML='<div class="split-hint" style="color:var(--green);font-weight:700">✓ No overlaps — everyone fits.</div>'; return; }
+  body.innerHTML = conflictSessions.slice().sort((a,b)=>a.start-b.start).map(s=>{
+    const ev = s.members[0];
+    const locs = s.members.map(m=>esc(m.location)).join(', ');
     const opts = suggestSlots(ev, busy);
     let fix;
     if(opts.length){
       fix = opts.slice(0,3).map(o=>'<div class="cf-opt">→ '+optLabel(o,tz)+'</div>').join('')
           + (opts.length>3 ? '<div class="cf-more">+'+(opts.length-3)+' more — hover the session</div>' : '');
     } else fix = '<div class="cf-opt">No same-course slot in the next 7 days.</div>';
-    return '<div class="conflict-row"><div class="cf-when">'+fmtInTz(ev.start,tz)+' · '+esc(ev.location)+'</div>'
-         + '<div class="cf-who">'+esc(ev.student||'')+' · '+esc(ev.course||'')+'</div>'
+    return '<div class="conflict-row"><div class="cf-when">'+fmtInTz(ev.start,tz)+' · '+locs+'</div>'
+         + '<div class="cf-who">'+esc(ev.course||'')+' · '+s.members.length+' booking'+(s.members.length===1?'':'s')+'</div>'
          + fix+'</div>';
   }).join('');
 }
@@ -531,10 +552,11 @@ function renderMonth(){
   hidePopover();
   document.getElementById('stats-title').textContent='This month';
   document.getElementById('split-body').innerHTML='<div class="split-hint">Open a day to see how to split it across instructors.</div>';
-  const { assign:mAssign } = assignInstructors(events);
+  const { sessions:mSessions } = assignInstructors(events);
+  viewSessions = mSessions;
   const conflictByDay = {};
-  events.forEach(e=>{ if(mAssign.get(e)<0){ const k=dayKeyInTz(e.start,tz); conflictByDay[k]=(conflictByDay[k]||0)+1; } });
-  const mConflicts = events.filter(e=>mAssign.get(e)<0).length;
+  let mConflicts = 0;
+  mSessions.forEach(s=>{ if(s.instr<0){ const k=dayKeyInTz(s.start,tz); conflictByDay[k]=(conflictByDay[k]||0)+1; mConflicts++; } });
   document.getElementById('conflict-title').textContent='Conflicts ('+mConflicts+')';
   document.getElementById('conflict-body').innerHTML = mConflicts
     ? '<div class="split-hint" style="color:var(--red);font-weight:700">'+mConflicts+' overlaps this month. Open a flagged day (🔴) for fixes.</div>'
@@ -560,7 +582,8 @@ function renderMonth(){
   }
 
   document.getElementById('k-total').textContent=events.length;
-  let peak=0; events.forEach(e=>{ const n=events.filter(x=>x.start<e.end&&x.end>e.start).length; if(n>peak)peak=n; });
+  // peak concurrent = merged Zoom sessions overlapping at once (instructor demand), not raw bookings
+  let peak=0; mSessions.forEach(s=>{ const n=mSessions.filter(x=>x.start<s.end&&x.end>s.start).length; if(n>peak)peak=n; });
   document.getElementById('k-peak').textContent=peak; document.getElementById('k-cap').textContent=minInstructors()+'–'+maxInstructors();
   const ko=document.getElementById('k-over'); ko.textContent=mConflicts?('Yes — '+mConflicts):'No'; ko.style.color=mConflicts?'var(--red)':'var(--green)';
   renderConverter();
@@ -573,7 +596,9 @@ function render(){
   document.getElementById('dayback').style.display='';
   document.getElementById('stats-title').textContent='This day';
   document.getElementById('day-label').textContent = refDay.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
-  const { assign, busy } = assignInstructors(weekEvents.length ? weekEvents : events);
+  const { assign, busy, sessionOf } = assignInstructors(weekEvents.length ? weekEvents : events);
+  const daySessions = sessionsFor(events, sessionOf);   // merged Zoom sessions for this day
+  viewSessions = daySessions;
   const startMin = CONFIG.DAY_START*60, endMin = CONFIG.DAY_END*60;
   // capacity varies by shift; map a display-clock minute back to ET hour for that day
   const refNoon = new Date(refDay); refNoon.setHours(12,0,0,0);
@@ -623,19 +648,22 @@ function render(){
     const top = (m-startMin)*PX_PER_MIN;
     const ii = assign.get(ev);
     const conflict = ii < 0;
+    const sess = sessionOf.get(ev);
+    const coTaught = sess ? sess.members.length-1 : 0;   // other locations sharing this Zoom
     const pill = conflict ? '<span class="ipill warn">!</span>'
                           : '<span class="ipill" style="background:'+INSTRUCTORS[ii].color+'">'+INSTRUCTORS[ii].initials+'</span>';
+    const zoomTag = coTaught>0 ? '<span class="ipill" style="background:#0EA5E9" title="One Zoom — taught with '+coTaught+' other location'+(coTaught>1?'s':'')+'">📹+'+coTaught+'</span>' : '';
     const el = document.createElement('div'); el.className='evt z-'+ev.zone+(conflict?' conflict':'');
     const pk = packMap.get(ev) || {lane:0,lanes:1};
     el.style.left='calc('+(pk.lane/pk.lanes*100)+'% + 2px)';
     el.style.width='calc('+(100/pk.lanes)+'% - 4px)';
     el.style.right='auto';
     el.style.top=top+'px'; el.style.height=Math.max(26,durMin*PX_PER_MIN-3)+'px';
-    el.innerHTML = '<div class="et-time">'+pill+fmtInTz(ev.start,tz)+' · '+esc(ev.location)+'</div>'
+    el.innerHTML = '<div class="et-time">'+pill+zoomTag+fmtInTz(ev.start,tz)+' · '+esc(ev.location)+'</div>'
       + '<div class="who">'+esc(ev.student||'')+'</div>'
       + '<div class="loc-local">'+esc(ev.course||'')+' · '+fmtInTz(ev.start,ev.tz)+' local</div>';
     const opts = conflict ? suggestSlots(ev, busy) : null;
-    el.addEventListener('mouseenter', ()=> showPopover(el, ev, ii, opts, tz));
+    el.addEventListener('mouseenter', ()=> showPopover(el, ev, ii, opts, tz, sess));
     el.addEventListener('mouseleave', hidePopover);
     cols[ev.zone].appendChild(el);
   });
@@ -644,7 +672,8 @@ function render(){
   const load = document.createElement('div'); load.className='tl-load';
   const minCap = minInstructors(), maxCap = maxInstructors();
   document.getElementById('k-cap').textContent = minCap+'–'+maxCap;
-  const disp = events.map(ev=>{ const s=minutesInTz(ev.start,tz); return {s, e:s+(ev.end-ev.start)/60000}; });
+  // concurrency = merged Zoom sessions running at once (NOT raw bookings — one instructor covers a whole same-cert session)
+  const disp = daySessions.map(s=>{ const mn=minutesInTz(s.start,tz); return {s:mn, e:mn+(s.end-s.start)/60000}; });
   let peak = 0, over = false;
   for (let t=startMin; t<endMin; t+=15){
     const n = disp.filter(d=> d.s < t+15 && d.e > t).length;
@@ -661,17 +690,17 @@ function render(){
   }
   grid.appendChild(load);
 
-  // KPIs
-  const conflicts = events.filter(e=> assign.get(e) < 0);
+  // KPIs — conflicts are per SESSION (a different cert/time with no free instructor), not per booking
+  const cfSessions = daySessions.filter(s=> s.instr < 0).sort((a,b)=>a.start-b.start);
   const cfb = document.getElementById('cf-banner');
-  if(conflicts.length){ cfb.style.display='flex'; cfb.innerHTML='⚠️ '+conflicts.length+' scheduling conflict'+(conflicts.length>1?'s':'')+' today — hover a red session for the fix.'; }
+  if(cfSessions.length){ cfb.style.display='flex'; cfb.innerHTML='⚠️ '+cfSessions.length+' scheduling conflict'+(cfSessions.length>1?'s':'')+' today — hover a red session for the fix.'; }
   else { cfb.style.display='none'; }
   document.getElementById('k-total').textContent = events.length;
   document.getElementById('k-peak').textContent = peak;
-  const ko = document.getElementById('k-over'); ko.textContent = conflicts.length?('Yes — '+conflicts.length):'No'; ko.style.color = conflicts.length?'var(--red)':'var(--green)';
+  const ko = document.getElementById('k-over'); ko.textContent = cfSessions.length?('Yes — '+cfSessions.length):'No'; ko.style.color = cfSessions.length?'var(--red)':'var(--green)';
 
-  renderConflicts(conflicts, busy, tz);
-  renderSplit(assign, events);
+  renderConflicts(cfSessions, busy, tz);
+  renderSplit(daySessions);
   renderConverter();
 }
 
@@ -695,12 +724,17 @@ function tzShort(tz){
 /* ---- hover popover (details + conflict solution) ---- */
 const popoverEl = document.createElement('div'); popoverEl.id='popover'; document.body.appendChild(popoverEl);
 function hidePopover(){ popoverEl.classList.remove('show'); }
-function showPopover(el, ev, ii, opts, tz){
+function showPopover(el, ev, ii, opts, tz, sess){
   const conflict = ii < 0;
   let html = '<div class="po-head"><span class="po-dot" style="background:var(--z-'+ev.zone+')"></span>'+fmtInTz(ev.start,tz)+' · '+esc(ev.location)+'</div>'
     + '<div class="po-sub">'+esc(ev.student||'—')+'</div>'
     + '<div class="po-course">'+(esc(ev.course)||courseLabel(ev.course))+'</div>'
     + '<div class="po-times"><div class="po-time">Local<b>'+fmtInTz(ev.start,ev.tz)+'</b></div><div class="po-time">'+tzShort(tz)+'<b>'+fmtInTz(ev.start,tz)+'</b></div></div>';
+  if(sess && sess.members.length>1){
+    const others = sess.members.filter(m=>m!==ev).map(m=>esc(m.location)+' ('+esc(m.student||'')+')');
+    html += '<div class="po-fix" style="background:#E0F2FE"><div class="lbl" style="color:#0369A1">📹 Same Zoom — '+sess.members.length+' locations, one instructor</div>'
+      + others.map(o=>'<div class="po-opt">'+o+'</div>').join('') + '</div>';
+  }
   if(conflict){
     html += '<div class="po-status bad">⚠️ Conflict — all instructors busy</div>';
     if(opts && opts.length){
@@ -761,9 +795,9 @@ function renderConverter(){
   document.getElementById('conv-out').innerHTML = zones.map(([n,z,zc])=>
     '<div class="conv-line"><span class="zn"><i style="background:var(--z-'+zc+')"></i>'+n+'</span><span class="tm">'+fmtInTz(instant,z)+'</span></div>'
   ).join('');
-  // overlap check
+  // overlap check — count merged Zoom sessions running then (instructor demand), not raw bookings
   const end = new Date(instant.getTime()+90*60000);
-  const n = events.filter(ev=> ev.start < end && ev.end > instant).length;
+  const n = viewSessions.filter(s=> s.start < end && s.end > instant).length;
   const cap = instructorsAt(instant) || maxInstructors();
   const v = document.getElementById('conv-verdict');
   if (n>=cap){ v.style.background='var(--red-bg)'; v.style.color='var(--red)'; v.textContent='🔴 '+n+' already running — at capacity ('+cap+'). Reschedule needed.'; }
