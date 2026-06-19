@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CPR Syndicate — Renewals</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  :root{
+    --purple:#6D3BF5;--purple-2:#7C3AED;--purple-dim:#EEEAFE;--purple-dim-2:#F4F1FF;
+    --bg:#F5F5FA;--card:#FFF;--ink:#1B1B2E;--muted:#8A8A99;--border:#E6E6F0;
+    --green:#16A34A;--green-bg:#F0FDF4;--amber:#D97706;--amber-bg:#FFFBEB;--red:#EF4444;--red-bg:#FEF2F2;--blue:#2563EB;--blue-bg:#EFF6FF;
+    --bls:#6D3BF5;--bls-bg:#EEEAFE;--rc:#E11D48;--rc-bg:#FFE9EE;--hs:#EA7C1E;--hs-bg:#FFF1E3;--other:#64748B;--other-bg:#F1F5F9;
+  }
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,sans-serif;background:var(--bg);color:var(--ink);}
+
+  .topbar{background:var(--card);border-bottom:1px solid var(--border);padding:14px 26px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;position:sticky;top:0;z-index:30;}
+  body.embed .brand{display:none;}
+  body.embed .topbar{justify-content:flex-end;padding:12px 22px;}
+  .brand{display:flex;align-items:center;gap:11px;}
+  .logo-icon{width:34px;height:34px;background:linear-gradient(135deg,var(--purple-2),var(--purple));border-radius:9px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;font-weight:700;}
+  .brand h1{font-size:17px;font-weight:800;letter-spacing:-.02em;}
+  .brand p{font-size:12px;color:var(--muted);}
+  .btn{background:var(--purple);color:#fff;border:none;padding:9px 15px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;}
+  .btn:hover{background:var(--purple-2);}
+  .btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--border);}
+  .btn.ghost:hover{border-color:var(--purple);color:var(--purple);}
+
+  .wrap{padding:18px 26px 60px;max-width:1320px;margin:0 auto;}
+  .banner{display:flex;align-items:center;gap:10px;border-radius:12px;padding:11px 16px;font-size:13px;font-weight:500;margin-bottom:16px;flex-wrap:wrap;}
+  .banner.ok{background:var(--green-bg);color:var(--green);} .banner.warn{background:var(--amber-bg);color:var(--amber);} .banner.err{background:var(--red-bg);color:var(--red);}
+  .banner code{background:rgba(0,0,0,.06);padding:1px 6px;border-radius:5px;}
+
+  .scoreboard{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px;}
+  @media(max-width:820px){.scoreboard{grid-template-columns:1fr 1fr;}}
+  .stat-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:15px 17px;}
+  .stat-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px;}
+  .stat-value{font-size:26px;font-weight:800;line-height:1;letter-spacing:-.02em;}
+  .stat-value.purple{color:var(--purple);} .stat-value.amber{color:var(--amber);}
+  .stat-sub{font-size:11.5px;color:var(--muted);font-weight:600;margin-top:6px;}
+
+  /* import + cadence row */
+  .tools{display:grid;grid-template-columns:1fr 1.3fr;gap:14px;margin-bottom:20px;}
+  @media(max-width:900px){.tools{grid-template-columns:1fr;}}
+  .panel{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:15px 17px;}
+  .panel h3{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:11px;}
+  .drop{border:1.5px dashed var(--border);border-radius:11px;padding:16px;text-align:center;color:var(--muted);font-size:12.5px;font-weight:600;cursor:pointer;transition:.15s;}
+  .drop:hover,.drop.drag{border-color:var(--purple);background:var(--purple-dim-2);color:var(--purple);}
+  .drop b{color:var(--ink);}
+  .import-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center;}
+  .import-note{font-size:11px;color:var(--muted);margin-top:9px;line-height:1.5;}
+  .import-note code{background:var(--bg);padding:1px 5px;border-radius:4px;}
+
+  .cadence{display:flex;flex-direction:column;gap:7px;}
+  .cad-row{display:grid;grid-template-columns:54px 1fr auto;align-items:center;gap:10px;font-size:12.5px;}
+  .cad-tag{font-weight:800;color:#fff;border-radius:6px;padding:3px 0;text-align:center;font-size:11px;}
+  .cad-note{color:var(--ink);font-weight:600;}
+  .cad-ch{font-size:11px;font-weight:700;color:var(--muted);white-space:nowrap;}
+
+  /* kanban */
+  .kanban{display:grid;grid-auto-flow:column;grid-auto-columns:248px;gap:13px;overflow-x:auto;padding-bottom:12px;}
+  .col{background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:11px;}
+  .col-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding:0 2px;}
+  .col-title{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;display:flex;align-items:center;gap:7px;}
+  .col-title i{width:9px;height:9px;border-radius:3px;}
+  .col-count{font-size:11px;font-weight:700;color:var(--muted);background:var(--card);border:1px solid var(--border);border-radius:100px;padding:1px 8px;}
+  .col-body{display:flex;flex-direction:column;gap:9px;min-height:34px;}
+  .col-empty{font-size:11.5px;color:#C4C4CF;font-weight:600;text-align:center;padding:14px 4px;}
+
+  .card2{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:11px 12px;}
+  .c2-top{display:flex;align-items:baseline;justify-content:space-between;gap:8px;}
+  .c2-name{font-size:13.5px;font-weight:800;letter-spacing:-.01em;}
+  .c2-days{font-size:11px;font-weight:800;white-space:nowrap;}
+  .c2-meta{font-size:11.5px;color:var(--muted);margin-top:4px;}
+  .c2-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;align-items:center;}
+  .tag{font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:100px;}
+  .src{font-size:9.5px;font-weight:800;padding:2px 7px;border-radius:100px;text-transform:uppercase;letter-spacing:.03em;}
+  .src-cal{background:var(--blue-bg);color:var(--blue);} .src-csv{background:var(--purple-dim);color:var(--purple);}
+  .c2-touch{font-size:11px;font-weight:700;margin-top:9px;padding:6px 8px;border-radius:8px;background:var(--amber-bg);color:var(--amber);}
+  .c2-contact{font-size:11px;color:var(--muted);margin-top:7px;word-break:break-word;}
+  .c2-contact a{color:var(--purple);text-decoration:none;font-weight:600;}
+
+  .future-note{margin-top:20px;font-size:12.5px;color:var(--muted);background:var(--card);border:1px solid var(--border);border-radius:12px;padding:13px 16px;line-height:1.6;}
+  .future-note b{color:var(--ink);}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="logo-icon">+</div>
+    <div><h1>Renewals</h1><p>Customers approaching their 2-year cert expiry</p></div>
+  </div>
+  <div style="display:flex;gap:8px;">
+    <button class="btn ghost" id="btn-clear" title="Remove imported customers">Clear import</button>
+    <button class="btn" id="btn-import">⬆ Import customers (CSV)</button>
+    <input type="file" id="file" accept=".csv,text/csv" style="display:none">
+  </div>
+</header>
+
+<div class="wrap">
+  <div id="banner" class="banner warn">Loading…</div>
+
+  <div class="scoreboard">
+    <div class="stat-card"><div class="stat-label">In renewal window</div><div class="stat-value purple" id="k-window">0</div><div class="stat-sub">expiring within 90 days</div></div>
+    <div class="stat-card"><div class="stat-label">Due now</div><div class="stat-value amber" id="k-due">0</div><div class="stat-sub">a touch is owed</div></div>
+    <div class="stat-card"><div class="stat-label">Expiring ≤ 30 days</div><div class="stat-value" id="k-soon">0</div><div class="stat-sub">urgent</div></div>
+    <div class="stat-card"><div class="stat-label">Total tracked</div><div class="stat-value" id="k-total">0</div><div class="stat-sub" id="k-total-sub">calendar + imported</div></div>
+  </div>
+
+  <div class="tools">
+    <div class="panel">
+      <h3>📥 Import back-catalog</h3>
+      <div class="drop" id="drop"><b>Drop a CSV here</b> or click to choose<br><span style="font-size:11px">name, cert, class date (or expiry), email, phone</span></div>
+      <div class="import-actions">
+        <button class="btn ghost" id="btn-paste" style="font-size:12px;padding:7px 11px">Paste CSV text</button>
+        <button class="btn ghost" id="btn-sample" style="font-size:12px;padding:7px 11px">Download sample</button>
+        <span id="import-count" style="font-size:11.5px;color:var(--muted);font-weight:700"></span>
+      </div>
+      <div class="import-note">Columns are auto-detected (any order). Use a <code>class date</code> (expiry = +2 yrs is computed) <i>or</i> an <code>expiry</code> column directly. Imports are saved in this browser.</div>
+    </div>
+    <div class="panel">
+      <h3>📣 Reach-out cadence</h3>
+      <div class="cadence" id="cadence"></div>
+    </div>
+  </div>
+
+  <div class="kanban" id="kanban"></div>
+
+  <div class="future-note" id="future-note"></div>
+</div>
+
+<script>
+const CONFIG = { GCAL_API_KEY:'AIzaSyC_TFebAKiiw97ZRl3pjA75pC9vt-23r7Y', GCAL_ID:'cprsyndicate@gmail.com', CERT_MONTHS:24 };
+const LS_KEY = 'cprsyndicate_renewal_import_v1';
+const DAY = 86400000;
+
+/* reach-out cadence — milestones counting down to expiry */
+const CADENCE = [
+  { m:90, label:'T-90', color:'#16A34A', channel:'Email',       note:'Renewal opens — book link' },
+  { m:60, label:'T-60', color:'#0EA5E9', channel:'Email',       note:'Friendly reminder' },
+  { m:30, label:'T-30', color:'#6D3BF5', channel:'Email + SMS', note:'1 month left' },
+  { m:15, label:'T-15', color:'#D97706', channel:'SMS',         note:'2 weeks left' },
+  { m:7,  label:'T-7',  color:'#EA580C', channel:'Email + SMS', note:'Final week' },
+  { m:0,  label:'Day-of', color:'#EF4444', channel:'Email + SMS', note:'Expires today' },
+];
+
+function certInfo(text=''){
+  const t=(text||'').toLowerCase();
+  if(t.includes('bls')) return {label:'BLS', cls:'tag', bg:'var(--bls-bg)', fg:'var(--bls)'};
+  if(t.includes('heartsaver')) return {label:'Heartsaver', bg:'var(--hs-bg)', fg:'var(--hs)'};
+  if(t.includes('acls')) return {label:'ACLS', bg:'var(--other-bg)', fg:'var(--other)'};
+  if(t.includes('pals')) return {label:'PALS', bg:'var(--other-bg)', fg:'var(--other)'};
+  if(t.includes('red cross')||t.includes('redcross')||/first aid/.test(t)||t.includes('rcfa')||t.includes('arc')) return {label:'Red Cross FA', bg:'var(--rc-bg)', fg:'var(--rc)'};
+  return {label:(text||'CPR').slice(0,16), bg:'var(--other-bg)', fg:'var(--other)'};
+}
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+function parseTitle(s=''){
+  const m=s.match(/^\s*(.+?)\s*[—–-]\s*(.*)$/); let loc=s.trim(),rest='';
+  if(m){loc=m[1].trim();rest=m[2].trim();}
+  const cm=rest.match(/(red cross[^·\-—]*|heartsaver[^·\-—]*|bls[^·\-—]*|acls[^·\-—]*|pals[^·\-—]*|first aid[^·\-—]*)/i);
+  let course=cm?cm[0].trim():'', student=rest;
+  if(cm) student=rest.slice(0,cm.index).replace(/[·\-—\s]+$/,'').trim();
+  else { const d=rest.split(/\s*·\s*/); if(d.length>1){student=d[0].trim();course=d.slice(1).join(' · ').trim();} }
+  return {location:loc, student, course};
+}
+
+function addMonths(date, n){ const d=new Date(date); d.setMonth(d.getMonth()+n); return d; }
+function today0(){ const d=new Date(); d.setHours(0,0,0,0); return d; }
+function daysLeftOf(expiry){ return Math.round((expiry - today0())/DAY); }
+function bucketIdx(d){ if(d>90) return -1; const MS=CADENCE.map(c=>c.m); for(let i=0;i<MS.length;i++){ const lower = MS[i+1]!==undefined?MS[i+1]:-Infinity; if(d>lower) return i; } return MS.length-1; }
+function fmtDate(d){ return new Intl.DateTimeFormat('en-US',{month:'short',day:'numeric',year:'numeric'}).format(d); }
+
+let calendarCustomers = [];
+let importedCustomers = [];
+
+/* ---- Google Calendar feed: every student, expiry = class date + 2yr ---- */
+async function loadCalendar(){
+  try{
+    const now=new Date();
+    const tmin=new Date(now.getFullYear()-2, now.getMonth(), 1);   // back 2 yrs (in case history grows)
+    const tmax=new Date(now.getFullYear(), now.getMonth()+2, 1);
+    const url='https://www.googleapis.com/calendar/v3/calendars/'+encodeURIComponent(CONFIG.GCAL_ID)+'/events?key='+CONFIG.GCAL_API_KEY+'&singleEvents=true&orderBy=startTime&maxResults=2500&timeMin='+tmin.toISOString()+'&timeMax='+tmax.toISOString();
+    const r=await fetch(url); if(!r.ok) throw new Error('HTTP '+r.status);
+    const d=await r.json();
+    calendarCustomers=(d.items||[]).filter(e=>e.start&&e.start.dateTime).map(e=>{
+      const p=parseTitle(e.summary||''); const classDate=new Date(e.start.dateTime); classDate.setHours(0,0,0,0);
+      return { name:p.student||'(no name)', cert:p.course||'CPR', classDate, expiry:addMonths(classDate, CONFIG.CERT_MONTHS), email:'', phone:'', source:'calendar' };
+    });
+    return {ok:true, n:calendarCustomers.length};
+  }catch(err){ return {ok:false, reason:err.message}; }
+}
+
+/* ---- CSV import ---- */
+function parseCSV(text){
+  const rows=[]; let row=[], cur='', q=false;
+  for(let i=0;i<text.length;i++){ const c=text[i];
+    if(q){ if(c==='"'){ if(text[i+1]==='"'){cur+='"';i++;} else q=false; } else cur+=c; }
+    else { if(c==='"') q=true; else if(c===','){ row.push(cur); cur=''; } else if(c==='\n'||c==='\r'){ if(c==='\r'&&text[i+1]==='\n')i++; if(cur!==''||row.length){ row.push(cur); rows.push(row); row=[]; cur=''; } } else cur+=c; }
+  }
+  if(cur!==''||row.length){ row.push(cur); rows.push(row); }
+  return rows.filter(r=>r.some(x=>x.trim()!==''));
+}
+function findCol(headers, opts, avoid){
+  for(const o of opts){ const i=headers.findIndex(h=> h.includes(o) && !(avoid||[]).some(a=>h.includes(a))); if(i>=0) return i; }
+  return -1;
+}
+function importCSV(text){
+  const rows=parseCSV(text); if(rows.length<2){ alert('CSV needs a header row + at least one row.'); return; }
+  const headers=rows[0].map(h=>h.trim().toLowerCase());
+  const ci={
+    name: findCol(headers,['name','customer','student','full']),
+    cert: findCol(headers,['cert','course','class'],['date']),
+    expiry: findCol(headers,['expir','expire']),
+    date: findCol(headers,['class date','cert date','certified','completed','date']),
+    email: findCol(headers,['email','e-mail']),
+    phone: findCol(headers,['phone','mobile','cell']),
+  };
+  if(ci.name<0){ alert('Could not find a "name" column.'); return; }
+  if(ci.expiry<0 && ci.date<0){ alert('Need a "class date" or "expiry" column.'); return; }
+  const out=[];
+  for(let r=1;r<rows.length;r++){
+    const row=rows[r]; const get=i=> i>=0 ? (row[i]||'').trim() : '';
+    const name=get(ci.name); if(!name) continue;
+    let expiry;
+    if(ci.expiry>=0 && get(ci.expiry)){ expiry=new Date(get(ci.expiry)); }
+    else { const cd=new Date(get(ci.date)); if(isNaN(cd)) continue; expiry=addMonths(cd, CONFIG.CERT_MONTHS); }
+    if(isNaN(expiry)) continue; expiry.setHours(0,0,0,0);
+    out.push({ name, cert:get(ci.cert)||'CPR', classDate:ci.date>=0&&get(ci.date)?new Date(get(ci.date)):null, expiry, email:get(ci.email), phone:get(ci.phone), source:'csv' });
+  }
+  if(!out.length){ alert('No valid rows found (check the date column).'); return; }
+  importedCustomers=out;
+  localStorage.setItem(LS_KEY, JSON.stringify(out.map(c=>({...c, expiry:c.expiry.toISOString(), classDate:c.classDate?c.classDate.toISOString():null}))));
+  render();
+}
+function loadStoredImport(){
+  try{ const raw=localStorage.getItem(LS_KEY); if(!raw) return; importedCustomers=JSON.parse(raw).map(c=>({...c, expiry:new Date(c.expiry), classDate:c.classDate?new Date(c.classDate):null})); }catch(e){}
+}
+
+/* ---- render ---- */
+function allCustomers(){
+  // dedupe a calendar student against an identical import (name + expiry month)
+  const seen=new Set(importedCustomers.map(c=>c.name.toLowerCase()+'|'+c.expiry.getFullYear()+'-'+c.expiry.getMonth()));
+  const cal=calendarCustomers.filter(c=> !seen.has(c.name.toLowerCase()+'|'+c.expiry.getFullYear()+'-'+c.expiry.getMonth()));
+  return importedCustomers.concat(cal);
+}
+
+function renderCadence(){
+  document.getElementById('cadence').innerHTML = CADENCE.map(c=>
+    '<div class="cad-row"><span class="cad-tag" style="background:'+c.color+'">'+c.label+'</span>'
+    + '<span class="cad-note">'+c.note+'</span><span class="cad-ch">'+c.channel+'</span></div>'
+  ).join('');
+}
+
+function render(){
+  renderCadence();
+  const all=allCustomers().map(c=>({ ...c, daysLeft:daysLeftOf(c.expiry) }));
+  const inWindow=all.filter(c=> c.daysLeft<=90);          // due or overdue or within 90d
+  const future=all.filter(c=> c.daysLeft>90);
+
+  // KPIs
+  document.getElementById('k-window').textContent = inWindow.filter(c=>c.daysLeft>=0).length;
+  document.getElementById('k-due').textContent = inWindow.length;     // anyone in-window has a touch owed
+  document.getElementById('k-soon').textContent = all.filter(c=>c.daysLeft>=0 && c.daysLeft<=30).length;
+  document.getElementById('k-total').textContent = all.length;
+  document.getElementById('k-total-sub').textContent = calendarCustomers.length+' calendar · '+importedCustomers.length+' imported';
+
+  // kanban
+  const board=document.getElementById('kanban'); board.innerHTML='';
+  CADENCE.forEach((cad,idx)=>{
+    const items=inWindow.filter(c=> bucketIdx(c.daysLeft)===idx).sort((a,b)=>a.daysLeft-b.daysLeft);
+    const col=document.createElement('div'); col.className='col';
+    col.innerHTML='<div class="col-head"><span class="col-title"><i style="background:'+cad.color+'"></i>'+cad.label+'</span><span class="col-count">'+items.length+'</span></div>';
+    const body=document.createElement('div'); body.className='col-body';
+    if(!items.length) body.innerHTML='<div class="col-empty">—</div>';
+    items.forEach(c=> body.appendChild(card(c,cad)));
+    col.appendChild(body); board.appendChild(col);
+  });
+
+  // future note
+  const fn=document.getElementById('future-note');
+  if(future.length){
+    const next=future.sort((a,b)=>a.expiry-b.expiry)[0];
+    fn.style.display='';
+    fn.innerHTML='<b>'+future.length+' student'+(future.length>1?'s':'')+'</b> tracked from Google Calendar but <b>not yet in the renewal window</b> (more than 90 days from expiry). The earliest enters the cadence around <b>'+fmtDate(new Date(next.expiry.getTime()-90*DAY))+'</b> — they’ll appear automatically as their 2-year mark approaches.';
+  } else fn.style.display='none';
+}
+
+function card(c, cad){
+  const ci=certInfo(c.cert);
+  const el=document.createElement('div'); el.className='card2';
+  const overdue=c.daysLeft<0;
+  const daysTxt = overdue ? ('expired '+Math.abs(c.daysLeft)+'d ago') : (c.daysLeft===0?'expires today':'in '+c.daysLeft+'d');
+  const daysColor = c.daysLeft<=7?'var(--red)':(c.daysLeft<=30?'var(--amber)':'var(--green)');
+  const contact = [c.email?('<a href="mailto:'+esc(c.email)+'">'+esc(c.email)+'</a>'):'', c.phone?('<a href="tel:'+esc(c.phone)+'">'+esc(c.phone)+'</a>'):''].filter(Boolean).join(' · ');
+  el.innerHTML =
+    '<div class="c2-top"><span class="c2-name">'+esc(c.name)+'</span><span class="c2-days" style="color:'+daysColor+'">'+daysTxt+'</span></div>'
+    + '<div class="c2-meta">Expires '+fmtDate(c.expiry)+'</div>'
+    + '<div class="c2-tags"><span class="tag" style="background:'+ci.bg+';color:'+ci.fg+'">'+esc(ci.label)+'</span>'
+      + '<span class="src '+(c.source==='calendar'?'src-cal':'src-csv')+'">'+(c.source==='calendar'?'📅 Calendar':'📥 Imported')+'</span></div>'
+    + '<div class="c2-touch">📣 '+cad.label+' touch due · '+cad.channel+'</div>'
+    + (contact?'<div class="c2-contact">'+contact+'</div>':'<div class="c2-contact" style="color:#C4C4CF">no contact info</div>');
+  return el;
+}
+
+/* ---- wiring ---- */
+const fileInput=document.getElementById('file');
+document.getElementById('btn-import').addEventListener('click',()=>fileInput.click());
+document.getElementById('drop').addEventListener('click',()=>fileInput.click());
+fileInput.addEventListener('change',e=>{ const f=e.target.files[0]; if(f){ const rd=new FileReader(); rd.onload=()=>importCSV(rd.result); rd.readAsText(f); } });
+const drop=document.getElementById('drop');
+['dragover','dragenter'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('drag');}));
+['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('drag');}));
+drop.addEventListener('drop',e=>{ const f=e.dataTransfer.files[0]; if(f){ const rd=new FileReader(); rd.onload=()=>importCSV(rd.result); rd.readAsText(f); } });
+document.getElementById('btn-paste').addEventListener('click',()=>{ const t=prompt('Paste CSV (first line = headers like: name, cert, class date, email, phone)'); if(t) importCSV(t); });
+document.getElementById('btn-clear').addEventListener('click',()=>{ if(confirm('Remove imported customers? (Calendar students stay.)')){ importedCustomers=[]; localStorage.removeItem(LS_KEY); render(); } });
+document.getElementById('btn-sample').addEventListener('click',()=>{
+  const csv='name,cert,class date,email,phone\nMaria Lopez,AHA BLS Provider,2024-07-15,maria@example.com,555-0101\nJ. Carter,Red Cross First Aid,2024-08-02,jcarter@example.com,555-0188\nPriya Shah,Heartsaver,2024-09-20,priya@example.com,555-0143\n';
+  const a=document.createElement('a'); a.href='data:text/csv,'+encodeURIComponent(csv); a.download='renewal-import-sample.csv'; a.click();
+});
+if(new URLSearchParams(location.search).get('embed')) document.body.classList.add('embed');
+
+(async function init(){
+  loadStoredImport();
+  renderCadence(); render();
+  const banner=document.getElementById('banner');
+  const res=await loadCalendar();
+  if(res.ok){ banner.className='banner ok'; banner.innerHTML='🟢 Live — '+res.n+' students from Google Calendar (renew 2 yrs after class)'+(importedCustomers.length?(' + <b>'+importedCustomers.length+'</b> imported'):'')+'.'; }
+  else { banner.className='banner err'; banner.innerHTML='🔴 Google Calendar error ('+esc(res.reason)+'). Imported customers still shown.'; }
+  render();
+})();
+</script>
+</body>
+</html>

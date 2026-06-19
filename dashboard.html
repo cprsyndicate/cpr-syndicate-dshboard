@@ -335,15 +335,9 @@
       <div class="kanban" id="leads-kanban"></div>
     </section>
 
-    <!-- ============ RENEWALS ============ -->
-    <section class="view" id="view-renewals">
-      <div class="scoreboard">
-        <div class="stat-card"><div class="stat-label">In Renewal Window</div><div class="stat-value purple" id="kpi-renew">0</div><div class="stat-sub">within 90 days</div></div>
-        <div class="stat-card"><div class="stat-label">Renewed (This Month)</div><div class="stat-value" id="kpi-renewed">0</div><div class="stat-sub">re-booked</div></div>
-        <div class="stat-card"><div class="stat-label">Renewal Rate</div><div class="stat-value" id="kpi-renewrate">0%</div><div class="stat-sub">won ÷ contacted</div></div>
-        <div class="stat-card"><div class="stat-label">Due Now</div><div class="stat-value" id="kpi-due" style="color:var(--amber)">0</div><div class="stat-sub" style="color:var(--amber)">touch pending</div></div>
-      </div>
-      <div class="kanban" id="renewals-kanban"></div>
+    <!-- ============ RENEWALS (embedded) ============ -->
+    <section class="view" id="view-renewals" style="margin:-22px -26px -40px;">
+      <iframe src="renewals.html?embed=1" title="Renewals" style="width:100%;height:calc(100vh - 64px);border:0;display:block;"></iframe>
     </section>
 
   </div>
@@ -488,6 +482,7 @@ function bucketFor(daysLeft) {
 
 function renderRenewals() {
   const board = document.getElementById('renewals-kanban');
+  if(!board) return;   // Renewals is now an embedded page (renewals.html); demo board removed
   board.innerHTML = '';
   let dueNow = 0;
   RENEWAL_COLS.forEach(col => {
@@ -554,7 +549,7 @@ document.querySelectorAll('.nav-item').forEach(btn => btn.addEventListener('clic
   document.getElementById('page-title').textContent = titles[v][0];
   document.getElementById('page-sub').textContent = titles[v][1];
   // the schedule tab brings its own controls; hide the global ones there
-  document.querySelector('.topbar-right').style.display = (v==='schedule'||v==='instructors'||v==='locations'||v==='analytics'||v==='automations') ? 'none' : 'flex';
+  document.querySelector('.topbar-right').style.display = (v==='schedule'||v==='instructors'||v==='locations'||v==='analytics'||v==='automations'||v==='renewals') ? 'none' : 'flex';
 }));
 // default tab is Schedule -> hide global controls on load
 document.querySelector('.topbar-right').style.display = 'none';
