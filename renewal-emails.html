@@ -43,8 +43,9 @@
   .em-list{margin:0 0 12px;padding-left:0;list-style:none;font-size:13.5px;color:#444;}
   .em-list li{padding:3px 0 3px 22px;position:relative;}
   .em-list li::before{content:'✓';position:absolute;left:0;color:var(--green);font-weight:800;}
+  .reassure{background:#F4F1FF;border-left:3px solid var(--purple);border-radius:8px;padding:9px 12px;font-size:13px;line-height:1.5;color:var(--ink);margin-bottom:14px;}
   .promo{background:var(--purple-dim);border:1px dashed var(--purple);border-radius:10px;padding:10px 13px;font-size:13px;font-weight:700;color:var(--purple-2);margin-bottom:16px;}
-  .promo .code{background:#fff;border:1px solid var(--purple);border-radius:6px;padding:1px 7px;font-weight:800;letter-spacing:.03em;}
+  .code{background:#fff;border:1px solid var(--purple);border-radius:6px;padding:1px 7px;font-weight:800;letter-spacing:.03em;color:var(--purple-2);}
   .cta{display:inline-block;background:var(--purple);color:#fff;text-decoration:none;font-weight:800;font-size:14px;padding:12px 22px;border-radius:10px;}
   .em-foot{padding:14px 20px;border-top:1px solid var(--border);font-size:11px;color:var(--muted);line-height:1.6;}
 
@@ -62,7 +63,7 @@
 </header>
 <div class="wrap">
   <div class="intro">
-    <b>Review draft — nothing sends yet.</b> These are the renewal-cadence messages. Highlighted chips like <span class="mf">{{first_name}}</span> are <b>merge fields</b> auto-filled per customer (<span class="mf">{{cert}}</span> = BLS / Red Cross FA / Heartsaver, <span class="mf">{{expiry_date}}</span>, <span class="mf">{{renew_link}}</span>, <span class="mf">{{promo_code}}</span>). Every touch carries the <b>$25-off returning-student offer</b> — promo code <span class="mf">{{promo_code}}</span> is still to be created.
+    <b>Review draft — nothing sends yet.</b> These are the renewal-cadence messages. Highlighted chips like <span class="mf">{{first_name}}</span> are <b>merge fields</b> auto-filled per customer (<span class="mf">{{cert}}</span> = BLS / Red Cross FA / Heartsaver, <span class="mf">{{expiry_date}}</span>, <span class="mf">{{renew_link}}</span>). Every touch carries the <b>$25-off returning-student offer</b> · code <span class="code">RENEW25</span>, plus a reminder that it's the same trusted certification with an upgraded experience.
     <div class="legend"><span><span class="mf">merge field</span></span><span>📧 Email</span><span>💬 SMS</span></div>
   </div>
   <div id="touches"></div>
@@ -87,22 +88,23 @@ const TOUCHES = [
       preview:"Don't let it lapse — renew today.",
       body:['Hi {{first_name}}, your <b>{{cert}}</b> expires <b>{{expiry_date}}</b> — just 30 days away. Renew before then to stay current and skip starting over later. Same-day and 100% online.'],
       cta:'Renew now' },
-    sms:'CPR Syndicate: Hi {{first_name}}, your {{cert}} expires {{expiry_date}} (30 days). Renew online same-day & take $25 off (code {{promo_code}}): {{renew_link}} — Reply STOP to opt out.' },
-  { tag:'T-15', color:'#D97706', when:'15 days before expiry', sms:'CPR Syndicate: {{first_name}}, 2 weeks left on your {{cert}} (expires {{expiry_date}}). Renew today, $25 off with {{promo_code}}: {{renew_link}}' },
+    sms:'CPR Syndicate: Hi {{first_name}}, your {{cert}} expires {{expiry_date}} (30 days). Renew online same-day & take $25 off (code RENEW25): {{renew_link}} — Reply STOP to opt out.' },
+  { tag:'T-15', color:'#D97706', when:'15 days before expiry', sms:'CPR Syndicate: {{first_name}}, 2 weeks left on your {{cert}} (expires {{expiry_date}}). Renew today, $25 off with RENEW25: {{renew_link}}' },
   { tag:'T-7', color:'#EA580C', when:'7 days before expiry', email:{
       subject:'⏰ Final week — your {{cert}} expires {{expiry_date}}',
       preview:'Renew today and stay certified.',
       body:['This is your final-week reminder, {{first_name}}: your <b>{{cert}}</b> expires in <b>7 days</b>. Renewing before it lapses is the quick path — don’t risk having to redo the full course.'],
       cta:'Renew before {{expiry_date}}' },
-    sms:'CPR Syndicate: Final week! Your {{cert}} expires {{expiry_date}}. Renew online today ($25 off, {{promo_code}}): {{renew_link}}' },
+    sms:'CPR Syndicate: Final week! Your {{cert}} expires {{expiry_date}}. Renew online today ($25 off, RENEW25): {{renew_link}}' },
   { tag:'Day-of', color:'#EF4444', when:'expiry day', email:{
       subject:'Your {{cert}} expires today, {{first_name}}',
       preview:'Renew now to stay current.',
       body:['Today’s the day, {{first_name}} — your <b>{{cert}}</b> expires. Good news: you can still renew <b>same-day, 100% online</b> and get your new 2-year card right away. Let’s keep you compliant.'],
       cta:'Renew today' },
-    sms:'CPR Syndicate: Your {{cert}} expires TODAY. Renew same-day online & take $25 off ({{promo_code}}): {{renew_link}}' },
+    sms:'CPR Syndicate: Your {{cert}} expires TODAY. Renew same-day online & take $25 off (RENEW25): {{renew_link}}' },
 ];
-const PROMO = '🎟️ Returning student? Take <b>$25 off</b> your renewal with code <span class="mf">{{promo_code}}</span>';
+const PROMO = '🎟️ Returning student? Take <b>$25 off</b> your renewal with code <span class="code">RENEW25</span>';
+const REASSURE = '✨ It’s the <b>same fully compliant, employer-accepted certification</b> you earned with us — now a faster, smoother experience after two years of upgrades.';
 
 function mf(s){ return String(s).replace(/\{\{(.*?)\}\}/g,'<span class="mf">{{$1}}</span>'); }
 
@@ -119,6 +121,7 @@ document.getElementById('touches').innerHTML = TOUCHES.map(t=>{
       + '<div class="em-body">'
       + e.body.map(p=>'<p>'+mf(p)+'</p>').join('')
       + (e.list?'<ul class="em-list">'+e.list.map(li=>'<li>'+mf(li)+'</li>').join('')+'</ul>':'')
+      + '<div class="reassure">'+REASSURE+'</div>'
       + '<div class="promo">'+PROMO+'</div>'
       + '<a class="cta" href="#">'+mf(e.cta)+' →</a>'
       + '</div>'
