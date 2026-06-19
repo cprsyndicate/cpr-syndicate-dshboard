@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CPR Syndicate — Renewal Emails (preview)</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  :root{
+    --purple:#6D3BF5;--purple-2:#7C3AED;--purple-dim:#EEEAFE;--purple-dim-2:#F4F1FF;
+    --bg:#F5F5FA;--card:#FFF;--ink:#1B1B2E;--muted:#8A8A99;--border:#E6E6F0;
+    --green:#16A34A;--amber:#D97706;--red:#EF4444;--blue:#2563EB;
+  }
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,sans-serif;background:var(--bg);color:var(--ink);}
+  .topbar{background:var(--card);border-bottom:1px solid var(--border);padding:14px 26px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;position:sticky;top:0;z-index:30;}
+  body.embed .brand{display:none;} body.embed .topbar{justify-content:flex-end;}
+  .brand{display:flex;align-items:center;gap:11px;}
+  .logo-icon{width:34px;height:34px;background:linear-gradient(135deg,var(--purple-2),var(--purple));border-radius:9px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;font-weight:700;}
+  .brand h1{font-size:17px;font-weight:800;letter-spacing:-.02em;} .brand p{font-size:12px;color:var(--muted);}
+  .back{font-size:12.5px;font-weight:700;color:var(--purple);text-decoration:none;}
+
+  .wrap{padding:22px 26px 70px;max-width:760px;margin:0 auto;}
+  .intro{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:15px 18px;margin-bottom:22px;font-size:13px;color:var(--muted);line-height:1.6;}
+  .intro b{color:var(--ink);}
+  .mf{background:#FFF3D6;border:1px solid #F4D58A;border-radius:5px;padding:0 4px;font-size:.92em;font-weight:700;color:#92600A;white-space:nowrap;}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:12px;}
+  .legend span{display:flex;align-items:center;gap:6px;color:var(--muted);font-weight:600;}
+
+  .touch{margin-bottom:30px;}
+  .touch-head{display:flex;align-items:center;gap:10px;margin-bottom:11px;}
+  .tag{font-weight:800;color:#fff;border-radius:7px;padding:4px 10px;font-size:12px;}
+  .when{font-size:12.5px;color:var(--muted);font-weight:600;}
+  .ch{margin-left:auto;font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;}
+
+  /* email card */
+  .email{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:0 10px 30px -22px rgba(27,27,46,.5);}
+  .em-bar{background:var(--bg);border-bottom:1px solid var(--border);padding:10px 16px;font-size:12px;color:var(--muted);}
+  .em-bar .from{font-weight:700;color:var(--ink);}
+  .em-subject{padding:14px 20px 4px;font-size:16px;font-weight:800;letter-spacing:-.01em;}
+  .em-preview{padding:0 20px 12px;font-size:12.5px;color:var(--muted);border-bottom:1px solid var(--border);}
+  .em-body{padding:18px 20px;font-size:14px;line-height:1.6;}
+  .em-body p{margin-bottom:12px;}
+  .em-list{margin:0 0 12px;padding-left:0;list-style:none;font-size:13.5px;color:#444;}
+  .em-list li{padding:3px 0 3px 22px;position:relative;}
+  .em-list li::before{content:'✓';position:absolute;left:0;color:var(--green);font-weight:800;}
+  .promo{background:var(--purple-dim);border:1px dashed var(--purple);border-radius:10px;padding:10px 13px;font-size:13px;font-weight:700;color:var(--purple-2);margin-bottom:16px;}
+  .promo .code{background:#fff;border:1px solid var(--purple);border-radius:6px;padding:1px 7px;font-weight:800;letter-spacing:.03em;}
+  .cta{display:inline-block;background:var(--purple);color:#fff;text-decoration:none;font-weight:800;font-size:14px;padding:12px 22px;border-radius:10px;}
+  .em-foot{padding:14px 20px;border-top:1px solid var(--border);font-size:11px;color:var(--muted);line-height:1.6;}
+
+  /* sms bubble */
+  .phone{background:#F0F2F5;border:1px solid var(--border);border-radius:16px;padding:16px;max-width:360px;}
+  .sms-from{text-align:center;font-size:11px;font-weight:700;color:var(--muted);margin-bottom:9px;}
+  .bubble{background:#fff;border:1px solid #E2E5EA;border-radius:17px;border-bottom-left-radius:5px;padding:10px 13px;font-size:13.5px;line-height:1.45;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.05);}
+  .sms-label{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:14px 0 7px;}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><div class="logo-icon">+</div><div><h1>Renewal Emails</h1><p>Preview before launch · 6 emails + 4 SMS</p></div></div>
+  <a class="back" href="renewals.html?embed=1">‹ Back to Renewals</a>
+</header>
+<div class="wrap">
+  <div class="intro">
+    <b>Review draft — nothing sends yet.</b> These are the renewal-cadence messages. Highlighted chips like <span class="mf">{{first_name}}</span> are <b>merge fields</b> auto-filled per customer (<span class="mf">{{cert}}</span> = BLS / Red Cross FA / Heartsaver, <span class="mf">{{expiry_date}}</span>, <span class="mf">{{renew_link}}</span>). Every touch carries the <b>10% returning-student offer · code WELCOMEBACK</b>.
+    <div class="legend"><span><span class="mf">merge field</span></span><span>📧 Email</span><span>💬 SMS</span></div>
+  </div>
+  <div id="touches"></div>
+</div>
+
+<script>
+const FROM = 'CPR Syndicate &lt;renewals@cprsyndicate.com&gt;';
+const TOUCHES = [
+  { tag:'T-90', color:'#16A34A', when:'90 days before expiry', email:{
+      subject:'Your {{cert}} renews in 90 days — lock it in early, {{first_name}}',
+      preview:'Same-day, 100% online. New 2-year card.',
+      body:['Hi {{first_name}}, your <b>{{cert}}</b> certification expires <b>{{expiry_date}}</b> — about 3 months out. Now is the easiest time to renew: pick any day, finish online, and walk away with a new 2-year card.'],
+      list:['No last-minute scramble','No gap in compliance for work','Same-day slots — even weekends'],
+      cta:'Renew my {{cert}}' } },
+  { tag:'T-60', color:'#0EA5E9', when:'60 days before expiry', email:{
+      subject:'60 days left on your {{cert}}, {{first_name}}',
+      preview:'Renew online in under an hour.',
+      body:['Quick heads-up, {{first_name}} — your <b>{{cert}}</b> expires <b>{{expiry_date}}</b> (~2 months away). Renewing now keeps you certified with zero gap, and you can knock it out online today.'],
+      cta:'Book my renewal' } },
+  { tag:'T-30', color:'#6D3BF5', when:'30 days before expiry', email:{
+      subject:'1 month until your {{cert}} expires',
+      preview:"Don't let it lapse — renew today.",
+      body:['Hi {{first_name}}, your <b>{{cert}}</b> expires <b>{{expiry_date}}</b> — just 30 days away. Renew before then to stay current and skip starting over later. Same-day and 100% online.'],
+      cta:'Renew now' },
+    sms:'CPR Syndicate: Hi {{first_name}}, your {{cert}} expires {{expiry_date}} (30 days). Renew online same-day & save 10% (code WELCOMEBACK): {{renew_link}} — Reply STOP to opt out.' },
+  { tag:'T-15', color:'#D97706', when:'15 days before expiry', sms:'CPR Syndicate: {{first_name}}, 2 weeks left on your {{cert}} (expires {{expiry_date}}). Renew today, 10% off with WELCOMEBACK: {{renew_link}}' },
+  { tag:'T-7', color:'#EA580C', when:'7 days before expiry', email:{
+      subject:'⏰ Final week — your {{cert}} expires {{expiry_date}}',
+      preview:'Renew today and stay certified.',
+      body:['This is your final-week reminder, {{first_name}}: your <b>{{cert}}</b> expires in <b>7 days</b>. Renewing before it lapses is the quick path — don’t risk having to redo the full course.'],
+      cta:'Renew before {{expiry_date}}' },
+    sms:'CPR Syndicate: Final week! Your {{cert}} expires {{expiry_date}}. Renew online today (10% off, WELCOMEBACK): {{renew_link}}' },
+  { tag:'Day-of', color:'#EF4444', when:'expiry day', email:{
+      subject:'Your {{cert}} expires today, {{first_name}}',
+      preview:'Renew now to stay current.',
+      body:['Today’s the day, {{first_name}} — your <b>{{cert}}</b> expires. Good news: you can still renew <b>same-day, 100% online</b> and get your new 2-year card right away. Let’s keep you compliant.'],
+      cta:'Renew today' },
+    sms:'CPR Syndicate: Your {{cert}} expires TODAY. Renew same-day online & save 10% (WELCOMEBACK): {{renew_link}}' },
+];
+const PROMO = '🎟️ Returning student? Save <b>10%</b> with code <span class="code">WELCOMEBACK</span>';
+
+function mf(s){ return String(s).replace(/\{\{(.*?)\}\}/g,'<span class="mf">{{$1}}</span>'); }
+
+document.getElementById('touches').innerHTML = TOUCHES.map(t=>{
+  const channels = [t.email?'📧 Email':'', t.sms?'💬 SMS':''].filter(Boolean).join(' + ');
+  let html = '<div class="touch"><div class="touch-head"><span class="tag" style="background:'+t.color+'">'+t.tag+'</span>'
+    + '<span class="when">'+t.when+'</span><span class="ch">'+channels+'</span></div>';
+  if(t.email){
+    const e=t.email;
+    html += '<div class="email">'
+      + '<div class="em-bar"><div class="from">'+FROM+'</div>To: '+mf('{{first_name}}')+'</div>'
+      + '<div class="em-subject">'+mf(e.subject)+'</div>'
+      + '<div class="em-preview">'+mf(e.preview)+'</div>'
+      + '<div class="em-body">'
+      + e.body.map(p=>'<p>'+mf(p)+'</p>').join('')
+      + (e.list?'<ul class="em-list">'+e.list.map(li=>'<li>'+mf(li)+'</li>').join('')+'</ul>':'')
+      + '<div class="promo">'+PROMO+'</div>'
+      + '<a class="cta" href="#">'+mf(e.cta)+' →</a>'
+      + '</div>'
+      + '<div class="em-foot">CPR Syndicate · Same-day AHA &amp; Red Cross certification, online.<br>You’re getting this because you certified with us. <u>Unsubscribe</u> · Update preferences.</div>'
+      + '</div>';
+  }
+  if(t.sms){
+    html += (t.email?'<div class="sms-label">💬 SMS companion</div>':'')
+      + '<div class="phone"><div class="sms-from">CPR Syndicate</div><div class="bubble">'+mf(t.sms)+'</div></div>';
+  }
+  return html+'</div>';
+}).join('');
+
+if(new URLSearchParams(location.search).get('embed')) document.body.classList.add('embed');
+</script>
+</body>
+</html>
