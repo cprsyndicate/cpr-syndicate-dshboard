@@ -62,7 +62,7 @@
 </header>
 <div class="wrap">
   <div class="intro">
-    <b>Review draft — nothing sends yet.</b> These are the renewal-cadence messages. Highlighted chips like <span class="mf">{{first_name}}</span> are <b>merge fields</b> auto-filled per customer (<span class="mf">{{cert}}</span> = BLS / Red Cross FA / Heartsaver, <span class="mf">{{expiry_date}}</span>, <span class="mf">{{renew_link}}</span>). Every touch carries the <b>10% returning-student offer · code WELCOMEBACK</b>.
+    <b>Review draft — nothing sends yet.</b> These are the renewal-cadence messages. Highlighted chips like <span class="mf">{{first_name}}</span> are <b>merge fields</b> auto-filled per customer (<span class="mf">{{cert}}</span> = BLS / Red Cross FA / Heartsaver, <span class="mf">{{expiry_date}}</span>, <span class="mf">{{renew_link}}</span>, <span class="mf">{{promo_code}}</span>). Every touch carries the <b>$25-off returning-student offer</b> — promo code <span class="mf">{{promo_code}}</span> is still to be created.
     <div class="legend"><span><span class="mf">merge field</span></span><span>📧 Email</span><span>💬 SMS</span></div>
   </div>
   <div id="touches"></div>
@@ -87,22 +87,22 @@ const TOUCHES = [
       preview:"Don't let it lapse — renew today.",
       body:['Hi {{first_name}}, your <b>{{cert}}</b> expires <b>{{expiry_date}}</b> — just 30 days away. Renew before then to stay current and skip starting over later. Same-day and 100% online.'],
       cta:'Renew now' },
-    sms:'CPR Syndicate: Hi {{first_name}}, your {{cert}} expires {{expiry_date}} (30 days). Renew online same-day & save 10% (code WELCOMEBACK): {{renew_link}} — Reply STOP to opt out.' },
-  { tag:'T-15', color:'#D97706', when:'15 days before expiry', sms:'CPR Syndicate: {{first_name}}, 2 weeks left on your {{cert}} (expires {{expiry_date}}). Renew today, 10% off with WELCOMEBACK: {{renew_link}}' },
+    sms:'CPR Syndicate: Hi {{first_name}}, your {{cert}} expires {{expiry_date}} (30 days). Renew online same-day & take $25 off (code {{promo_code}}): {{renew_link}} — Reply STOP to opt out.' },
+  { tag:'T-15', color:'#D97706', when:'15 days before expiry', sms:'CPR Syndicate: {{first_name}}, 2 weeks left on your {{cert}} (expires {{expiry_date}}). Renew today, $25 off with {{promo_code}}: {{renew_link}}' },
   { tag:'T-7', color:'#EA580C', when:'7 days before expiry', email:{
       subject:'⏰ Final week — your {{cert}} expires {{expiry_date}}',
       preview:'Renew today and stay certified.',
       body:['This is your final-week reminder, {{first_name}}: your <b>{{cert}}</b> expires in <b>7 days</b>. Renewing before it lapses is the quick path — don’t risk having to redo the full course.'],
       cta:'Renew before {{expiry_date}}' },
-    sms:'CPR Syndicate: Final week! Your {{cert}} expires {{expiry_date}}. Renew online today (10% off, WELCOMEBACK): {{renew_link}}' },
+    sms:'CPR Syndicate: Final week! Your {{cert}} expires {{expiry_date}}. Renew online today ($25 off, {{promo_code}}): {{renew_link}}' },
   { tag:'Day-of', color:'#EF4444', when:'expiry day', email:{
       subject:'Your {{cert}} expires today, {{first_name}}',
       preview:'Renew now to stay current.',
       body:['Today’s the day, {{first_name}} — your <b>{{cert}}</b> expires. Good news: you can still renew <b>same-day, 100% online</b> and get your new 2-year card right away. Let’s keep you compliant.'],
       cta:'Renew today' },
-    sms:'CPR Syndicate: Your {{cert}} expires TODAY. Renew same-day online & save 10% (WELCOMEBACK): {{renew_link}}' },
+    sms:'CPR Syndicate: Your {{cert}} expires TODAY. Renew same-day online & take $25 off ({{promo_code}}): {{renew_link}}' },
 ];
-const PROMO = '🎟️ Returning student? Save <b>10%</b> with code <span class="code">WELCOMEBACK</span>';
+const PROMO = '🎟️ Returning student? Take <b>$25 off</b> your renewal with code <span class="mf">{{promo_code}}</span>';
 
 function mf(s){ return String(s).replace(/\{\{(.*?)\}\}/g,'<span class="mf">{{$1}}</span>'); }
 

@@ -104,8 +104,8 @@
 
   <div class="scoreboard">
     <div class="stat-card"><div class="stat-label">In renewal window</div><div class="stat-value purple" id="k-window">0</div><div class="stat-sub">expiring within 90 days</div></div>
-    <div class="stat-card"><div class="stat-label">Due now</div><div class="stat-value amber" id="k-due">0</div><div class="stat-sub">a touch is owed</div></div>
-    <div class="stat-card"><div class="stat-label">Expiring ≤ 30 days</div><div class="stat-value" id="k-soon">0</div><div class="stat-sub">urgent</div></div>
+    <div class="stat-card"><div class="stat-label">Expiring ≤ 30 days</div><div class="stat-value amber" id="k-soon">0</div><div class="stat-sub">urgent</div></div>
+    <div class="stat-card"><div class="stat-label">Lapsed (win-back)</div><div class="stat-value" id="k-lapsed" style="color:var(--red)">0</div><div class="stat-sub">already expired</div></div>
     <div class="stat-card"><div class="stat-label">Total tracked</div><div class="stat-value" id="k-total">0</div><div class="stat-sub" id="k-total-sub">calendar + imported</div></div>
   </div>
 
@@ -175,6 +175,15 @@ function fmtDate(d){ return new Intl.DateTimeFormat('en-US',{month:'short',day:'
 
 let calendarCustomers = [];
 let importedCustomers = [];
+let calStatus = null;   // {ok, n} | {ok:false, reason} | null while loading
+
+function renderBanner(){
+  const b=document.getElementById('banner'); if(!b) return;
+  const imp = importedCustomers.length ? (' + <b>'+importedCustomers.length.toLocaleString()+'</b> imported') : '';
+  if(calStatus===null){ b.className='banner warn'; b.innerHTML='Loading students from Google Calendar…'+(importedCustomers.length?(' ('+importedCustomers.length.toLocaleString()+' imported ready)'):''); }
+  else if(calStatus.ok){ b.className='banner ok'; b.innerHTML='🟢 Live — '+calStatus.n.toLocaleString()+' students from Google Calendar (renew 2 yrs after class)'+imp+'.'; }
+  else { b.className='banner err'; b.innerHTML='🔴 Google Calendar error ('+esc(calStatus.reason)+'). Imported customers still shown'+imp+'.'; }
+}
 
 /* ---- Google Calendar feed: every student, expiry = class date + 2yr ---- */
 async function loadCalendar(){
@@ -254,30 +263,42 @@ function renderCadence(){
   ).join('');
 }
 
+const LAPSED_CAP = 60;   // don't render thousands of lapsed cards — cap + "+N more"
+const LAPSED_CAD = { label:'Lapsed', color:'#EF4444', channel:'Win-back' };
+
+function colEl(title, color, count, items, cad, moreCount){
+  const col=document.createElement('div'); col.className='col';
+  col.innerHTML='<div class="col-head"><span class="col-title"><i style="background:'+color+'"></i>'+title+'</span><span class="col-count">'+count+'</span></div>';
+  const body=document.createElement('div'); body.className='col-body';
+  if(!items.length) body.innerHTML='<div class="col-empty">—</div>';
+  items.forEach(c=> body.appendChild(card(c,cad)));
+  if(moreCount>0){ const m=document.createElement('div'); m.className='col-empty'; m.textContent='+'+moreCount.toLocaleString()+' more lapsed'; body.appendChild(m); }
+  col.appendChild(body); return col;
+}
+
 function render(){
   renderCadence();
+  renderBanner();
   const all=allCustomers().map(c=>({ ...c, daysLeft:daysLeftOf(c.expiry) }));
-  const inWindow=all.filter(c=> c.daysLeft<=90);          // due or overdue or within 90d
+  const inWindow=all.filter(c=> c.daysLeft>=0 && c.daysLeft<=90);
+  const lapsed=all.filter(c=> c.daysLeft<0).sort((a,b)=> b.expiry-a.expiry);   // most-recently lapsed first
   const future=all.filter(c=> c.daysLeft>90);
 
   // KPIs
-  document.getElementById('k-window').textContent = inWindow.filter(c=>c.daysLeft>=0).length;
-  document.getElementById('k-due').textContent = inWindow.length;     // anyone in-window has a touch owed
-  document.getElementById('k-soon').textContent = all.filter(c=>c.daysLeft>=0 && c.daysLeft<=30).length;
-  document.getElementById('k-total').textContent = all.length;
-  document.getElementById('k-total-sub').textContent = calendarCustomers.length+' calendar · '+importedCustomers.length+' imported';
+  document.getElementById('k-window').textContent = inWindow.length.toLocaleString();
+  document.getElementById('k-soon').textContent = all.filter(c=>c.daysLeft>=0 && c.daysLeft<=30).length.toLocaleString();
+  document.getElementById('k-lapsed').textContent = lapsed.length.toLocaleString();
+  document.getElementById('k-total').textContent = all.length.toLocaleString();
+  document.getElementById('k-total-sub').textContent = calendarCustomers.length.toLocaleString()+' calendar · '+importedCustomers.length.toLocaleString()+' imported';
 
-  // kanban
+  // kanban — pre-expiry cadence columns
   const board=document.getElementById('kanban'); board.innerHTML='';
   CADENCE.forEach((cad,idx)=>{
     const items=inWindow.filter(c=> bucketIdx(c.daysLeft)===idx).sort((a,b)=>a.daysLeft-b.daysLeft);
-    const col=document.createElement('div'); col.className='col';
-    col.innerHTML='<div class="col-head"><span class="col-title"><i style="background:'+cad.color+'"></i>'+cad.label+'</span><span class="col-count">'+items.length+'</span></div>';
-    const body=document.createElement('div'); body.className='col-body';
-    if(!items.length) body.innerHTML='<div class="col-empty">—</div>';
-    items.forEach(c=> body.appendChild(card(c,cad)));
-    col.appendChild(body); board.appendChild(col);
+    board.appendChild(colEl(cad.label, cad.color, items.length, items, cad));
   });
+  // lapsed win-back column (capped)
+  board.appendChild(colEl('Lapsed · win-back', LAPSED_CAD.color, lapsed.length, lapsed.slice(0,LAPSED_CAP), LAPSED_CAD, lapsed.length-LAPSED_CAP));
 
   // future note
   const fn=document.getElementById('future-note');
@@ -300,7 +321,9 @@ function card(c, cad){
     + '<div class="c2-meta">Expires '+fmtDate(c.expiry)+'</div>'
     + '<div class="c2-tags"><span class="tag" style="background:'+ci.bg+';color:'+ci.fg+'">'+esc(ci.label)+'</span>'
       + '<span class="src '+(c.source==='calendar'?'src-cal':'src-csv')+'">'+(c.source==='calendar'?'📅 Calendar':'📥 Imported')+'</span></div>'
-    + '<div class="c2-touch">📣 '+cad.label+' touch due · '+cad.channel+'</div>'
+    + (c.daysLeft<0
+        ? '<div class="c2-touch" style="background:var(--red-bg);color:var(--red)">♻️ Win-back — lapsed '+Math.abs(c.daysLeft)+'d ago</div>'
+        : '<div class="c2-touch">📣 '+cad.label+' touch due · '+cad.channel+'</div>')
     + (contact?'<div class="c2-contact">'+contact+'</div>':'<div class="c2-contact" style="color:#C4C4CF">no contact info</div>');
   return el;
 }
@@ -324,11 +347,8 @@ if(new URLSearchParams(location.search).get('embed')) document.body.classList.ad
 
 (async function init(){
   loadStoredImport();
-  renderCadence(); render();
-  const banner=document.getElementById('banner');
-  const res=await loadCalendar();
-  if(res.ok){ banner.className='banner ok'; banner.innerHTML='🟢 Live — '+res.n+' students from Google Calendar (renew 2 yrs after class)'+(importedCustomers.length?(' + <b>'+importedCustomers.length+'</b> imported'):'')+'.'; }
-  else { banner.className='banner err'; banner.innerHTML='🔴 Google Calendar error ('+esc(res.reason)+'). Imported customers still shown.'; }
+  render();
+  calStatus = await loadCalendar();
   render();
 })();
 </script>

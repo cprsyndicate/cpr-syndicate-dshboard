@@ -1,0 +1,3 @@
+# Never commit customer data / PII to the public Pages repo
+*.csv
+renewals-import.csv
