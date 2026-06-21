@@ -269,8 +269,6 @@
   <button class="nav-item" data-view="analytics"><span class="icon">📊</span> Analytics</button>
   <button class="nav-item" data-view="automations"><span class="icon">⚡</span> Automations</button>
   <button class="nav-item" data-view="pipeline"><span class="icon">🎯</span> Pipeline</button>
-  <button class="nav-item" data-view="leads"><span class="icon">🟡</span> Leads</button>
-  <button class="nav-item" data-view="renewals"><span class="icon">🔄</span> Renewals</button>
   <div class="sidebar-footer">
     <div class="avatar-row">
       <div class="avatar">CS</div>
@@ -323,28 +321,6 @@
       <iframe src="board.html?embed=1" title="Pipeline" style="width:100%;height:calc(100vh - 64px);border:0;display:block;"></iframe>
     </section>
 
-    <!-- ============ LEADS ============ -->
-    <section class="view" id="view-leads">
-      <div class="scoreboard">
-        <div class="stat-card"><div class="stat-label">Pending Leads</div><div class="stat-value purple" id="kpi-pending">0</div><div class="stat-sub" id="kpi-pending-sub">in pipeline</div></div>
-        <div class="stat-card"><div class="stat-label">Won (This Month)</div><div class="stat-value" id="kpi-won">0</div><div class="stat-sub">conversions</div></div>
-        <div class="stat-card"><div class="stat-label">Conversion Rate</div><div class="stat-value" id="kpi-conv">0%</div><div class="stat-sub">won ÷ total</div></div>
-        <div class="stat-card"><div class="stat-label">At-Risk $</div><div class="stat-value" id="kpi-risk">$0</div><div class="stat-sub" style="color:var(--amber)">pending revenue</div></div>
-      </div>
-      <div class="filters">
-        <span class="filter-label">Source</span>
-        <button class="chip active" data-leadsrc="all">All</button>
-        <button class="chip" data-leadsrc="paid_ad">💰 Paid Ad</button>
-        <button class="chip" data-leadsrc="organic">🌱 Organic</button>
-        <button class="chip" data-leadsrc="manual">✋ Manual</button>
-      </div>
-      <div class="kanban" id="leads-kanban"></div>
-    </section>
-
-    <!-- ============ RENEWALS (embedded) ============ -->
-    <section class="view" id="view-renewals" style="margin:-22px -26px -40px;">
-      <iframe src="renewals.html?embed=1" title="Renewals" style="width:100%;height:calc(100vh - 64px);border:0;display:block;"></iframe>
-    </section>
 
   </div>
 </div>
@@ -414,6 +390,7 @@ let leadSrcFilter = 'all';
 
 function renderLeads() {
   const board = document.getElementById('leads-kanban');
+  if(!board) return;   // demo Leads tab removed — real leads live in the Pipeline tab
   board.innerHTML = '';
   const view = leads.filter(l => leadSrcFilter==='all' || l.src===leadSrcFilter);
 
