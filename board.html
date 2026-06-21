@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CPR Syndicate — Pipeline</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  :root{--purple:#6D3BF5;--purple-2:#7C3AED;--purple-dim:#EEEAFE;--purple-dim-2:#F4F1FF;
+    --bg:#F5F5FA;--card:#FFF;--ink:#1B1B2E;--muted:#8A8A99;--border:#E6E6F0;--green:#16A34A;--red:#EF4444;}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,sans-serif;background:var(--bg);color:var(--ink);}
+  .topbar{background:var(--card);border-bottom:1px solid var(--border);padding:12px 22px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;position:sticky;top:0;z-index:30;}
+  body.embed .brand{display:none;} body.embed .topbar{justify-content:space-between;}
+  .brand{display:flex;align-items:center;gap:10px;}
+  .logo-icon{width:32px;height:32px;background:linear-gradient(135deg,var(--purple-2),var(--purple));border-radius:9px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;font-weight:700;}
+  .brand h1{font-size:16px;font-weight:800;letter-spacing:-.02em;}
+  .seg{display:flex;gap:4px;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:3px;}
+  .seg button{border:none;background:none;padding:7px 14px;border-radius:8px;font:inherit;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;}
+  .seg button.active{background:#fff;color:var(--purple);box-shadow:0 1px 3px rgba(0,0,0,.1);}
+  .right{display:flex;align-items:center;gap:10px;}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 7px var(--green);}
+  .meta{font-size:11.5px;color:var(--muted);font-weight:600;}
+  .btn{border:1px solid var(--border);background:#fff;border-radius:8px;padding:6px 11px;font:inherit;font-size:12px;font-weight:700;color:var(--ink);cursor:pointer;}
+  .btn:hover{border-color:var(--purple);color:var(--purple);}
+
+  .wrap{padding:16px 22px 60px;}
+  .kanban{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(210px,1fr);gap:12px;overflow-x:auto;padding-bottom:14px;}
+  .col{background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:10px;min-width:210px;}
+  .col.drop{outline:2px dashed var(--purple);outline-offset:-2px;}
+  .col-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px;padding:0 2px;}
+  .col-title{font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;display:flex;align-items:center;gap:7px;}
+  .col-title i{width:9px;height:9px;border-radius:3px;}
+  .col-count{font-size:11px;font-weight:700;color:var(--muted);background:#fff;border:1px solid var(--border);border-radius:100px;padding:1px 8px;}
+  .col-body{display:flex;flex-direction:column;gap:8px;min-height:24px;}
+  .col-empty{font-size:11px;color:#C4C4CF;text-align:center;padding:10px 0;}
+  .kb{background:#fff;border:1px solid var(--border);border-left:3px solid var(--muted);border-radius:10px;padding:10px 11px;cursor:grab;}
+  .kb:hover{box-shadow:0 6px 16px -10px rgba(27,27,46,.4);}
+  .kb-name{font-size:13.5px;font-weight:800;letter-spacing:-.01em;}
+  .kb-meta{font-size:11px;color:var(--muted);margin-top:3px;}
+  .kb-email{font-size:10.5px;color:var(--muted);margin-top:2px;word-break:break-all;}
+  .kb-actions{display:flex;gap:5px;margin-top:8px;}
+  .mini{flex:1;border:1px solid var(--border);background:#fff;border-radius:7px;padding:5px;font:inherit;font-size:11px;font-weight:700;color:var(--muted);cursor:pointer;}
+  .mini.won:hover{border-color:var(--green);color:var(--green);background:#F0FDF4;}
+  .mini.lost:hover{border-color:var(--red);color:var(--red);background:#FEF2F2;}
+  .mini.reset:hover{border-color:var(--purple);color:var(--purple);}
+
+  .gate{max-width:340px;margin:80px auto;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:26px;text-align:center;}
+  .gate h2{font-size:17px;margin-bottom:6px;} .gate p{font-size:12.5px;color:var(--muted);margin-bottom:16px;}
+  .gate input{width:100%;border:1px solid var(--border);border-radius:10px;padding:11px;font-size:15px;text-align:center;letter-spacing:.1em;margin-bottom:12px;}
+  .gate button{width:100%;background:var(--purple);color:#fff;border:none;border-radius:10px;padding:11px;font:inherit;font-size:14px;font-weight:800;cursor:pointer;}
+  .err{color:var(--red);font-size:12px;font-weight:600;margin-top:8px;}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><div class="logo-icon">+</div><h1>Pipeline</h1></div>
+  <div class="seg" id="seg">
+    <button data-board="leads" class="active">🛒 Leads</button>
+    <button data-board="renewals">🔄 Renewals</button>
+  </div>
+  <div class="right"><span class="dot"></span><span class="meta" id="status">—</span><button class="btn" id="refresh">↻ Refresh</button></div>
+</header>
+<div class="wrap"><div id="content"></div></div>
+
+<script>
+const API = 'https://cpr-syndicate-renewals.vercel.app';
+const COLS = {
+  leads: [
+    {k:'new',label:'New',c:'#9CA3AF'},{k:'email1',label:'Email 1',c:'#2874A6'},{k:'email2',label:'Email 2',c:'#16A085'},
+    {k:'email3',label:'Email 3',c:'#8E44AD'},{k:'final',label:'Final',c:'#C0392B'},{k:'won',label:'Won',c:'#16A34A'},{k:'lost',label:'Lost',c:'#6B7280'},
+  ],
+  renewals: [
+    {k:'upcoming',label:'Upcoming',c:'#9CA3AF'},{k:'t90',label:'T-90',c:'#16A34A'},{k:'t60',label:'T-60',c:'#0EA5E9'},{k:'t30',label:'T-30',c:'#6D3BF5'},
+    {k:'t15',label:'T-15',c:'#D97706'},{k:'t7',label:'T-7',c:'#EA580C'},{k:'t0',label:'Day-of',c:'#EF4444'},{k:'renewed',label:'Renewed',c:'#16A34A'},{k:'lapsed',label:'Lapsed',c:'#6B7280'},
+  ],
+};
+let DATA = { leads:[], renewals:[] };
+let board = 'leads';
+function pass(){ return sessionStorage.getItem('board_pass') || ''; }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+async function load(){
+  const s=document.getElementById('status'); s.textContent='loading…';
+  try{
+    const r=await fetch(`${API}/api/board?pass=${encodeURIComponent(pass())}`);
+    if(r.status===401){ sessionStorage.removeItem('board_pass'); return gate('Wrong passcode'); }
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    DATA=await r.json();
+    s.textContent=DATA.leads.length+' leads · '+DATA.renewals.length+' renewals';
+    render();
+  }catch(e){ s.textContent='error: '+e.message; }
+}
+function render(){
+  const cols=COLS[board]; const items=DATA[board]||[];
+  const content=document.getElementById('content');
+  content.innerHTML='<div class="kanban">'+cols.map(col=>{
+    const cards=items.filter(x=>x.stage===col.k);
+    return `<div class="col" data-stage="${col.k}"><div class="col-head"><span class="col-title"><i style="background:${col.c}"></i>${col.label}</span><span class="col-count">${cards.length}</span></div>`
+      + '<div class="col-body">'+(cards.length?cards.map(c=>cardHtml(c,col.c)).join(''):'<div class="col-empty">—</div>')+'</div></div>';
+  }).join('')+'</div>';
+  wire();
+}
+function cardHtml(c,color){
+  const sub = board==='leads'
+    ? `${esc(c.cert)} · ${esc(c.location||'')} · ${c.ageHours}h ago`
+    : `${esc(c.cert)} · ${c.daysLeft<0?('expired '+Math.abs(c.daysLeft)+'d'):('in '+c.daysLeft+'d')}`;
+  const closed = c.stage==='won'||c.stage==='lost'||c.stage==='renewed'||c.stage==='lapsed';
+  const actions = closed
+    ? `<button class="mini reset" data-act="reset">↺ reopen</button>`
+    : `<button class="mini won" data-act="won">✓ Won</button><button class="mini lost" data-act="lost">✕ Lost</button>`;
+  return `<div class="kb" draggable="true" style="border-left-color:${color}" data-email="${esc(c.email)}">`
+    + `<div class="kb-name">${esc(c.name)}</div><div class="kb-meta">${sub}</div><div class="kb-email">${esc(c.email)}</div>`
+    + `<div class="kb-actions">${actions}</div></div>`;
+}
+async function mark(email, status){
+  const r=await fetch(`${API}/api/board-update`,{method:'POST',headers:{'content-type':'application/json'},
+    body:JSON.stringify({pass:pass(),type:board==='renewals'?'renewal':'lead',email,status})});
+  if(!r.ok){ alert('update failed'); return; }
+  load();
+}
+function wire(){
+  document.querySelectorAll('.mini').forEach(b=>b.addEventListener('click',e=>{
+    const email=e.target.closest('.kb').dataset.email; const act=b.dataset.act;
+    mark(email, act==='reset'?'':act);
+  }));
+  // drag a card onto Won / Lost columns to mark it
+  let dragEmail=null;
+  document.querySelectorAll('.kb').forEach(k=>k.addEventListener('dragstart',e=>{dragEmail=k.dataset.email;}));
+  document.querySelectorAll('.col').forEach(col=>{
+    const st=col.dataset.stage; if(st!=='won'&&st!=='lost') return;
+    col.addEventListener('dragover',e=>{e.preventDefault();col.classList.add('drop');});
+    col.addEventListener('dragleave',()=>col.classList.remove('drop'));
+    col.addEventListener('drop',e=>{e.preventDefault();col.classList.remove('drop');if(dragEmail)mark(dragEmail,st);});
+  });
+}
+function gate(err){
+  document.getElementById('content').innerHTML=`<div class="gate"><h2>🔒 Pipeline</h2><p>Enter the team passcode to view live leads & renewals.</p>`
+    +`<input id="pc" type="password" placeholder="passcode" autofocus><button id="go">Unlock</button>${err?`<div class="err">${err}</div>`:''}</div>`;
+  const submit=()=>{ const v=document.getElementById('pc').value.trim(); if(v){ sessionStorage.setItem('board_pass',v); load(); } };
+  document.getElementById('go').onclick=submit;
+  document.getElementById('pc').addEventListener('keydown',e=>{if(e.key==='Enter')submit();});
+}
+
+document.getElementById('seg').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b)return;
+  document.querySelectorAll('#seg button').forEach(x=>x.classList.remove('active')); b.classList.add('active'); board=b.dataset.board; render(); });
+document.getElementById('refresh').addEventListener('click',load);
+if(new URLSearchParams(location.search).get('embed')) document.body.classList.add('embed');
+pass() ? load() : gate('');
+</script>
+</body>
+</html>

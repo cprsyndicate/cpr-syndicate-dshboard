@@ -268,6 +268,7 @@
   <button class="nav-item" data-view="locations"><span class="icon">📍</span> Locations</button>
   <button class="nav-item" data-view="analytics"><span class="icon">📊</span> Analytics</button>
   <button class="nav-item" data-view="automations"><span class="icon">⚡</span> Automations</button>
+  <button class="nav-item" data-view="pipeline"><span class="icon">🎯</span> Pipeline</button>
   <button class="nav-item" data-view="leads"><span class="icon">🟡</span> Leads</button>
   <button class="nav-item" data-view="renewals"><span class="icon">🔄</span> Renewals</button>
   <div class="sidebar-footer">
@@ -315,6 +316,11 @@
     <!-- ============ AUTOMATIONS (embedded) ============ -->
     <section class="view" id="view-automations" style="margin:-22px -26px -40px;">
       <iframe src="automations.html?embed=1" title="Automations" style="width:100%;height:calc(100vh - 64px);border:0;display:block;"></iframe>
+    </section>
+
+    <!-- ============ PIPELINE (embedded kanban) ============ -->
+    <section class="view" id="view-pipeline" style="margin:-22px -26px -40px;">
+      <iframe src="board.html?embed=1" title="Pipeline" style="width:100%;height:calc(100vh - 64px);border:0;display:block;"></iframe>
     </section>
 
     <!-- ============ LEADS ============ -->
@@ -537,6 +543,7 @@ const titles = {
   locations:['Locations','Certifications sold per location, by month'],
   analytics:['Analytics','Bookings by cert, location, day & hour'],
   automations:['Automations','Everything the dashboard runs on autopilot'],
+  pipeline:['Pipeline','Leads & renewals moving through the cadence'],
   leads:['Leads','Pending leads moving through follow-up'],
   renewals:['Renewals','Customers within 90 days of cert expiry'],
 };
@@ -549,7 +556,7 @@ document.querySelectorAll('.nav-item').forEach(btn => btn.addEventListener('clic
   document.getElementById('page-title').textContent = titles[v][0];
   document.getElementById('page-sub').textContent = titles[v][1];
   // the schedule tab brings its own controls; hide the global ones there
-  document.querySelector('.topbar-right').style.display = (v==='schedule'||v==='instructors'||v==='locations'||v==='analytics'||v==='automations'||v==='renewals') ? 'none' : 'flex';
+  document.querySelector('.topbar-right').style.display = (v==='schedule'||v==='instructors'||v==='locations'||v==='analytics'||v==='automations'||v==='renewals'||v==='pipeline') ? 'none' : 'flex';
 }));
 // default tab is Schedule -> hide global controls on load
 document.querySelector('.topbar-right').style.display = 'none';
