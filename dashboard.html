@@ -269,6 +269,7 @@
   <button class="nav-item" data-view="analytics"><span class="icon">📊</span> Analytics</button>
   <button class="nav-item" data-view="automations"><span class="icon">⚡</span> Automations</button>
   <button class="nav-item" data-view="pipeline"><span class="icon">🎯</span> Pipeline</button>
+  <button class="nav-item" data-view="students"><span class="icon">👥</span> Students</button>
   <div class="sidebar-footer">
     <div class="avatar-row">
       <div class="avatar">CS</div>
@@ -319,6 +320,11 @@
     <!-- ============ PIPELINE (embedded kanban) ============ -->
     <section class="view" id="view-pipeline" style="margin:-22px -26px -40px;">
       <iframe src="board.html?embed=1" title="Pipeline" style="width:100%;height:calc(100vh - 64px);border:0;display:block;"></iframe>
+    </section>
+
+    <!-- ============ STUDENTS (embedded directory) ============ -->
+    <section class="view" id="view-students" style="margin:-22px -26px -40px;">
+      <iframe src="students.html?embed=1" title="Students" style="width:100%;height:calc(100vh - 64px);border:0;display:block;"></iframe>
     </section>
 
 
@@ -521,6 +527,7 @@ const titles = {
   analytics:['Analytics','Bookings by cert, location, day & hour'],
   automations:['Automations','Everything the dashboard runs on autopilot'],
   pipeline:['Pipeline','Leads & renewals moving through the cadence'],
+  students:['Students','All students — previous, future & imported'],
   leads:['Leads','Pending leads moving through follow-up'],
   renewals:['Renewals','Customers within 90 days of cert expiry'],
 };
@@ -533,7 +540,7 @@ document.querySelectorAll('.nav-item').forEach(btn => btn.addEventListener('clic
   document.getElementById('page-title').textContent = titles[v][0];
   document.getElementById('page-sub').textContent = titles[v][1];
   // the schedule tab brings its own controls; hide the global ones there
-  document.querySelector('.topbar-right').style.display = (v==='schedule'||v==='instructors'||v==='locations'||v==='analytics'||v==='automations'||v==='renewals'||v==='pipeline') ? 'none' : 'flex';
+  document.querySelector('.topbar-right').style.display = (v==='schedule'||v==='instructors'||v==='locations'||v==='analytics'||v==='automations'||v==='renewals'||v==='pipeline'||v==='students') ? 'none' : 'flex';
 }));
 // default tab is Schedule -> hide global controls on load
 document.querySelector('.topbar-right').style.display = 'none';
