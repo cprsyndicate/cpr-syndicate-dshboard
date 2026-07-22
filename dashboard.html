@@ -270,6 +270,7 @@
   <button class="nav-item" data-view="automations"><span class="icon">⚡</span> Automations</button>
   <button class="nav-item" data-view="pipeline"><span class="icon">🎯</span> Pipeline</button>
   <button class="nav-item" data-view="students"><span class="icon">👥</span> Students</button>
+  <button class="nav-item" data-view="compliance"><span class="icon">🛡️</span> Compliance</button>
   <div class="sidebar-footer">
     <div class="avatar-row">
       <div class="avatar">CS</div>
@@ -325,6 +326,13 @@
     <!-- ============ STUDENTS (embedded directory) ============ -->
     <section class="view" id="view-students" style="margin:-22px -26px -40px;">
       <iframe src="students.html?embed=1" title="Students" style="width:100%;height:calc(100vh - 64px);border:0;display:block;"></iframe>
+    </section>
+
+    <!-- ============ COMPLIANCE (embedded — AI instructor-compliance app) ============ -->
+    <!-- Deployed on Vercel. The app requires a password (cookie login) since it holds
+         instructor HR data; the embed shows the login form on first load, then the dashboard. -->
+    <section class="view" id="view-compliance" style="margin:-22px -26px -40px;">
+      <iframe src="https://cpr-compliance.vercel.app" title="Compliance" style="width:100%;height:calc(100vh - 64px);border:0;display:block;"></iframe>
     </section>
 
 
@@ -528,6 +536,7 @@ const titles = {
   automations:['Automations','Everything the dashboard runs on autopilot'],
   pipeline:['Pipeline','Leads & renewals moving through the cadence'],
   students:['Students','All students — previous, future & imported'],
+  compliance:['Compliance','AI audit of instructor class transcripts'],
   leads:['Leads','Pending leads moving through follow-up'],
   renewals:['Renewals','Customers within 90 days of cert expiry'],
 };
@@ -540,7 +549,7 @@ document.querySelectorAll('.nav-item').forEach(btn => btn.addEventListener('clic
   document.getElementById('page-title').textContent = titles[v][0];
   document.getElementById('page-sub').textContent = titles[v][1];
   // the schedule tab brings its own controls; hide the global ones there
-  document.querySelector('.topbar-right').style.display = (v==='schedule'||v==='instructors'||v==='locations'||v==='analytics'||v==='automations'||v==='renewals'||v==='pipeline'||v==='students') ? 'none' : 'flex';
+  document.querySelector('.topbar-right').style.display = (v==='schedule'||v==='instructors'||v==='locations'||v==='analytics'||v==='automations'||v==='renewals'||v==='pipeline'||v==='students'||v==='compliance') ? 'none' : 'flex';
 }));
 // default tab is Schedule -> hide global controls on load
 document.querySelector('.topbar-right').style.display = 'none';
