@@ -64,7 +64,7 @@
 </head>
 <body>
 <header class="topbar">
-  <div class="brand"><div class="logo-icon">+</div><div><h1>Analytics</h1><p>Bookings from Google Calendar</p></div></div>
+  <div class="brand"><div class="logo-icon">+</div><div><h1>Analytics</h1><p>Bookings from live booking system</p></div></div>
   <div class="nav">
     <button class="icon-btn" id="prev">‹</button>
     <button class="icon-btn" id="today" style="width:auto;padding:0 11px;font-size:12px;font-weight:700;">This month</button>
@@ -88,7 +88,7 @@
 </div>
 
 <script>
-const CONFIG={ GCAL_API_KEY:'AIzaSyC_TFebAKiiw97ZRl3pjA75pC9vt-23r7Y', GCAL_ID:'cprsyndicate@gmail.com', SEATS:10 };
+const CONFIG={ API_BASE:'https://booking.cprsyndicate.com', SEATS:10 };
 const LOC_TZ={'Tempe':'America/Phoenix','Long Beach':'America/Los_Angeles','DTLA':'America/Los_Angeles','Los Angeles (DTLA)':'America/Los_Angeles','San Francisco':'America/Los_Angeles','Pasadena':'America/Los_Angeles','Houston':'America/Chicago','Manhattan':'America/New_York','Columbus':'America/New_York','Atlanta':'America/New_York','Indianapolis':'America/New_York','Philadelphia':'America/New_York','Virginia Beach':'America/New_York'};
 const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
 const DOW=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
@@ -110,18 +110,16 @@ async function load(){
   const tmin=new Date(y,m,1), tmax=new Date(y,m+1,1);
   const banner=document.getElementById('banner');
   let evs=[];
-  if(CONFIG.GCAL_API_KEY && CONFIG.GCAL_ID){
-    const url='https://www.googleapis.com/calendar/v3/calendars/'+encodeURIComponent(CONFIG.GCAL_ID)+'/events?key='+CONFIG.GCAL_API_KEY+'&singleEvents=true&orderBy=startTime&maxResults=2500&timeMin='+tmin.toISOString()+'&timeMax='+tmax.toISOString();
+  if(CONFIG.API_BASE){
+    const monthKey=y+'-'+String(m+1).padStart(2,'0');
+    const url=CONFIG.API_BASE+'/api/analytics?month='+monthKey;
     try{
       const r=await fetch(url); if(!r.ok)throw new Error('HTTP '+r.status);
       const d=await r.json();
-      evs=(d.items||[]).filter(e=>e.start&&e.start.dateTime).map(e=>{
-        const p=parseTitle(e.summary||''); const tz=LOC_TZ[p.location]||'America/New_York';
-        return {start:new Date(e.start.dateTime), location:p.location, cert:courseLabel(p.course), tz};
-      });
-      banner.className='banner ok'; banner.innerHTML='🟢 Live — '+evs.length+' bookings from Google Calendar.';
-    }catch(err){ banner.className='banner err'; banner.innerHTML='🔴 Calendar error ('+err.message+').'; }
-  } else { banner.className='banner warn'; banner.innerHTML='⚠️ Add API key + calendar ID to CONFIG.'; }
+      evs=(d.events||[]).map(e=>({start:new Date(e.start), location:e.location, cert:e.cert, tz:e.tz||'America/New_York'}));
+      banner.className='banner ok'; banner.innerHTML='🟢 Live — '+evs.length+' bookings (paid + pending) from the booking system.';
+    }catch(err){ banner.className='banner err'; banner.innerHTML='🔴 Booking API error ('+err.message+').'; }
+  } else { banner.className='banner warn'; banner.innerHTML='⚠️ Set API_BASE in CONFIG.'; }
   render(evs);
 }
 
