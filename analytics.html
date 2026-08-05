@@ -60,12 +60,34 @@
   .col .barv{width:62%;background:var(--purple);border-radius:5px 5px 0 0;min-height:2px;}
   .col .clbl{font-size:10px;color:var(--muted);font-weight:600;}
   .col .cval{font-size:10.5px;font-weight:800;}
+  /* Taught/Sold segmented control */
+  .segctl{display:inline-flex;background:var(--border,#e6e6ef);border-radius:9px;padding:2px;margin-right:8px;}
+  .segbtn{border:0;background:transparent;font:inherit;font-size:12px;font-weight:700;color:var(--muted);
+    padding:5px 12px;border-radius:7px;cursor:pointer;}
+  .segbtn.on{background:#fff;color:var(--purple);box-shadow:0 1px 3px rgba(0,0,0,.12);}
+  /* Course x location matrix */
+  .csvbtn{float:right;border:1px solid var(--border,#e6e6ef);background:#fff;color:var(--muted);
+    font:inherit;font-size:11px;font-weight:700;padding:3px 9px;border-radius:7px;cursor:pointer;text-transform:none;}
+  .csvbtn:hover{color:var(--purple);border-color:var(--purple);}
+  .mxwrap{overflow-x:auto;margin-top:4px;}
+  table.mx{border-collapse:collapse;width:100%;font-size:12.5px;}
+  table.mx th,table.mx td{padding:7px 10px;text-align:right;white-space:nowrap;}
+  table.mx th{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);
+    border-bottom:1px solid var(--border,#e6e6ef);}
+  table.mx th:first-child,table.mx td.loc{text-align:left;font-weight:700;}
+  table.mx tbody tr:nth-child(even){background:rgba(0,0,0,.02);}
+  table.mx td.z{color:var(--muted);opacity:.45;}
+  table.mx td.tot{font-weight:800;}
+  table.mx tfoot td{border-top:2px solid var(--border,#e6e6ef);font-weight:800;}
 </style>
 </head>
 <body>
 <header class="topbar">
-  <div class="brand"><div class="logo-icon">+</div><div><h1>Analytics</h1><p>Bookings from live booking system</p></div></div>
+  <div class="brand"><div class="logo-icon">+</div><div><h1>Analytics</h1><p id="sub">Classes taught this month</p></div></div>
   <div class="nav">
+    <div class="segctl" title="Taught = classes held this month. Sold = bookings purchased this month.">
+      <button id="modeTaught" class="segbtn on">Taught</button><button id="modeSold" class="segbtn">Sold</button>
+    </div>
     <button class="icon-btn" id="prev">‹</button>
     <button class="icon-btn" id="today" style="width:auto;padding:0 11px;font-size:12px;font-weight:700;">This month</button>
     <button class="icon-btn" id="next">›</button>
@@ -84,6 +106,12 @@
   <div class="grid2">
     <div class="card"><h3>By region</h3><div id="byZone"></div></div>
     <div class="card"><h3>Capacity used <span style="font-weight:600;text-transform:none;color:var(--muted)">(booked vs ~10 seats/class)</span></h3><div id="cap"></div></div>
+  </div>
+  <div class="card">
+    <h3>Course &times; location
+      <button id="csv" class="csvbtn">&darr; CSV</button>
+    </h3>
+    <div class="mxwrap" id="matrix"></div>
   </div>
 </div>
 
@@ -104,23 +132,65 @@ function courseLabel(t=''){t=t.toLowerCase(); if(t.includes('bls'))return'BLS'; 
 function localHour(date,tz){ return +new Intl.DateTimeFormat('en-US',{timeZone:tz,hour:'2-digit',hour12:false}).format(date)%24; }
 
 let ref=new Date();
+// 'taught' = classes HELD this month (delivery / ops view, by class date)
+// 'sold'   = bookings PURCHASED this month (sales / marketing view, by booking date)
+let mode='taught';
+
+function mKey(y,m){ return y+'-'+String(m+1).padStart(2,'0'); }
+
+// Which month a PURCHASE belongs to must not depend on who is looking at this
+// page. Using the viewer's local clock made the same month read 61 in UTC and 73
+// in UTC+8. Bucket purchases on one fixed business calendar (Eastern — where most
+// locations are) so the number is identical for every viewer.
+const BIZ_TZ='America/New_York';
+const BIZ_FMT=new Intl.DateTimeFormat('en-CA',{timeZone:BIZ_TZ,year:'numeric',month:'2-digit',day:'2-digit'});
+function bizMonthKey(iso){ return BIZ_FMT.format(new Date(iso)).slice(0,7); }
+
+async function fetchMonth(key){
+  const r=await fetch(CONFIG.API_BASE+'/api/analytics?month='+key);
+  if(!r.ok) throw new Error('HTTP '+r.status);
+  const d=await r.json();
+  return (d.events||[]).map(e=>({
+    start:new Date(e.start),
+    bookedKey:e.bookedAt?bizMonthKey(e.bookedAt):null,
+    location:e.location, cert:e.cert, tz:e.tz||'America/New_York',
+  }));
+}
+
 async function load(){
   const y=ref.getFullYear(), m=ref.getMonth();
   document.getElementById('label').textContent=MONTHS[m]+' '+y;
-  const tmin=new Date(y,m,1), tmax=new Date(y,m+1,1);
   const banner=document.getElementById('banner');
+  document.getElementById('sub').textContent =
+    mode==='sold' ? 'Bookings purchased this month' : 'Classes taught this month';
   let evs=[];
-  if(CONFIG.API_BASE){
-    const monthKey=y+'-'+String(m+1).padStart(2,'0');
-    const url=CONFIG.API_BASE+'/api/analytics?month='+monthKey;
-    try{
-      const r=await fetch(url); if(!r.ok)throw new Error('HTTP '+r.status);
-      const d=await r.json();
-      evs=(d.events||[]).map(e=>({start:new Date(e.start), location:e.location, cert:e.cert, tz:e.tz||'America/New_York'}));
-      banner.className='banner ok'; banner.innerHTML='🟢 Live — '+evs.length+' bookings (paid + pending) from the booking system.';
-    }catch(err){ banner.className='banner err'; banner.innerHTML='🔴 Booking API error ('+err.message+').'; }
-  } else { banner.className='banner warn'; banner.innerHTML='⚠️ Set API_BASE in CONFIG.'; }
+  if(!CONFIG.API_BASE){ banner.className='banner warn'; banner.innerHTML='⚠️ Set API_BASE in CONFIG.'; render([]); return; }
+  try{
+    if(mode==='taught'){
+      evs=await fetchMonth(mKey(y,m));
+      banner.className='banner ok';
+      banner.innerHTML='🟢 Live — <b>'+evs.length+'</b> classes taught in '+MONTHS[m]+' (by class date).';
+    }else{
+      // The API is indexed by CLASS month, but a booking bought this month is
+      // usually for a class days away and sometimes months out. Pull a forward
+      // window of class-months, then keep only what was PURCHASED this month.
+      const keys=[]; for(let k=0;k<4;k++){ const d=new Date(y,m+k,1); keys.push(mKey(d.getFullYear(),d.getMonth())); }
+      const all=(await Promise.all(keys.map(fetchMonth))).flat();
+      const want=mKey(y,m);
+      evs=all.filter(e=>e.bookedKey===want);
+      banner.className='banner ok';
+      banner.innerHTML='🟢 Live — <b>'+evs.length+'</b> bookings sold in '+MONTHS[m]+' (by purchase date).';
+    }
+  }catch(err){ banner.className='banner err'; banner.innerHTML='🔴 Booking API error ('+err.message+').'; }
   render(evs);
+}
+
+function setMode(next){
+  if(mode===next) return;
+  mode=next;
+  document.getElementById('modeTaught').classList.toggle('on',mode==='taught');
+  document.getElementById('modeSold').classList.toggle('on',mode==='sold');
+  load();
 }
 
 function tally(arr,fn){const o={};arr.forEach(x=>{const k=fn(x);if(k!=null)o[k]=(o[k]||0)+1;});return o;}
@@ -157,6 +227,7 @@ function render(evs){
 
   barList('byCert',byCert,k=>CERTCOLOR[k]||'var(--purple)');
   renderLocBreakdown(evs);
+  renderMatrix(evs);
   colChart('byDow',DOW,DOW.map((_,i)=>byDow[i]||0));
   const hours=[]; for(let h=8;h<=21;h++)hours.push(h);
   const byHr=tally(evs,e=>localHour(e.start,e.tz));
@@ -190,6 +261,48 @@ function renderLocBreakdown(evs){
   }).join('');
 }
 
+/* Course x location matrix — the "how did each course do at each location" table. */
+let lastEvs=[];
+const CERT_ORDER=['Red Cross FA','BLS','Heartsaver','Other'];
+function renderMatrix(evs){
+  lastEvs=evs;
+  const el=document.getElementById('matrix');
+  const certs=CERT_ORDER.filter(c=>evs.some(e=>e.cert===c));
+  if(!evs.length||!certs.length){ el.innerHTML='<div class="name" style="color:var(--muted)">No data</div>'; return; }
+  const map={},tot={};
+  evs.forEach(e=>{ (map[e.location]=map[e.location]||{})[e.cert]=((map[e.location]||{})[e.cert]||0)+1;
+                   tot[e.location]=(tot[e.location]||0)+1; });
+  const locs=Object.keys(tot).sort((a,b)=>tot[b]-tot[a]);
+  const colTot=certs.map(c=>locs.reduce((s,l)=>s+((map[l]||{})[c]||0),0));
+  let h='<table class="mx"><thead><tr><th>Location</th>'
+    +certs.map(c=>'<th>'+c+'</th>').join('')+'<th>Total</th></tr></thead><tbody>';
+  h+=locs.map(l=>'<tr><td class="loc">'+l+'</td>'
+    +certs.map(c=>{const v=(map[l]||{})[c]||0; return '<td'+(v?'':' class="z"')+'>'+(v||'·')+'</td>';}).join('')
+    +'<td class="tot">'+tot[l]+'</td></tr>').join('');
+  h+='</tbody><tfoot><tr><td class="loc">Total</td>'
+    +colTot.map(v=>'<td class="tot">'+v+'</td>').join('')
+    +'<td class="tot">'+evs.length+'</td></tr></tfoot></table>';
+  el.innerHTML=h;
+}
+function exportCsv(){
+  const certs=CERT_ORDER.filter(c=>lastEvs.some(e=>e.cert===c));
+  const map={},tot={};
+  lastEvs.forEach(e=>{ (map[e.location]=map[e.location]||{})[e.cert]=((map[e.location]||{})[e.cert]||0)+1;
+                       tot[e.location]=(tot[e.location]||0)+1; });
+  const locs=Object.keys(tot).sort((a,b)=>tot[b]-tot[a]);
+  const q=s=>'"'+String(s).replace(/"/g,'""')+'"';
+  const rows=[['Location',...certs,'Total'].map(q).join(',')];
+  locs.forEach(l=>rows.push([q(l),...certs.map(c=>(map[l]||{})[c]||0),tot[l]].join(',')));
+  rows.push([q('Total'),...certs.map(c=>locs.reduce((s,l)=>s+((map[l]||{})[c]||0),0)),lastEvs.length].join(','));
+  const label=MONTHS[ref.getMonth()]+'-'+ref.getFullYear()+'-'+mode;
+  const url=URL.createObjectURL(new Blob([rows.join('\n')],{type:'text/csv'}));
+  const a=document.createElement('a'); a.href=url; a.download='cpr-'+label.toLowerCase()+'.csv'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+document.getElementById('modeTaught').addEventListener('click',()=>setMode('taught'));
+document.getElementById('modeSold').addEventListener('click',()=>setMode('sold'));
+document.getElementById('csv').addEventListener('click',exportCsv);
 document.getElementById('prev').addEventListener('click',()=>{ref.setMonth(ref.getMonth()-1);load();});
 document.getElementById('next').addEventListener('click',()=>{ref.setMonth(ref.getMonth()+1);load();});
 document.getElementById('today').addEventListener('click',()=>{ref=new Date();load();});
