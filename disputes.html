@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CPR Syndicate — Disputes</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  :root{--purple:#6D3BF5;--purple-2:#7C3AED;--purple-dim:#EEEAFE;--purple-dim-2:#F4F1FF;
+    --bg:#F5F5FA;--card:#FFF;--ink:#1B1B2E;--muted:#8A8A99;--border:#E6E6F0;--green:#16A34A;--amber:#D97706;--blue:#2563EB;--red:#EF4444;}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,sans-serif;background:var(--bg);color:var(--ink);}
+  .topbar{background:var(--card);border-bottom:1px solid var(--border);padding:12px 22px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;position:sticky;top:0;z-index:30;}
+  body.embed .brand{display:none;}
+  .brand{display:flex;align-items:center;gap:10px;}
+  .logo-icon{width:32px;height:32px;background:linear-gradient(135deg,var(--purple-2),var(--purple));border-radius:9px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;font-weight:700;}
+  .brand h1{font-size:16px;font-weight:800;letter-spacing:-.02em;}
+  .right{display:flex;align-items:center;gap:10px;}
+  .search{border:1px solid var(--border);border-radius:9px;padding:8px 12px;font:inherit;font-size:13px;width:300px;max-width:48vw;}
+  .btn{border:1px solid var(--border);background:#fff;border-radius:8px;padding:7px 11px;font:inherit;font-size:12px;font-weight:700;color:var(--ink);cursor:pointer;}
+  .btn:hover{border-color:var(--purple);color:var(--purple);}
+  .btn.primary{background:var(--purple);color:#fff;border-color:var(--purple);}
+
+  .wrap{padding:16px 22px 60px;}
+  .intro{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px 20px;margin-bottom:14px;font-size:13.5px;line-height:1.6;color:var(--muted);}
+  .intro b{color:var(--ink);}
+  .viewer{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;display:none;}
+  .viewerbar{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);font-size:12.5px;color:var(--muted);font-weight:600;}
+  iframe{width:100%;height:calc(100vh - 220px);min-height:520px;border:0;background:#fff;}
+  .empty,.loading{padding:40px;text-align:center;color:var(--muted);font-weight:600;}
+  .errbox{padding:16px 20px;background:#FEF2F2;border:1px solid #FECACA;color:var(--red);border-radius:12px;font-size:13px;font-weight:600;margin-bottom:14px;display:none;}
+
+  .gate{max-width:340px;margin:80px auto;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:26px;text-align:center;}
+  .gate h2{font-size:17px;margin-bottom:6px;} .gate p{font-size:12.5px;color:var(--muted);margin-bottom:16px;}
+  .gate input{width:100%;border:1px solid var(--border);border-radius:10px;padding:11px;font-size:15px;text-align:center;letter-spacing:.1em;margin-bottom:12px;}
+  .gate button{width:100%;background:var(--purple);color:#fff;border:none;border-radius:10px;padding:11px;font:inherit;font-size:14px;font-weight:800;cursor:pointer;}
+  .err{color:var(--red);font-size:12px;font-weight:600;margin-top:8px;}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><div class="logo-icon">+</div><h1>Disputes</h1></div>
+  <div class="right">
+    <input class="search" id="q" placeholder="Student email or “First Last”…">
+    <button class="btn primary" id="run">Build dossier</button>
+    <button class="btn" id="print" style="display:none">🖨 Print / PDF</button>
+  </div>
+</header>
+<div class="wrap">
+  <div id="content">
+    <div class="intro">
+      <b>Chargeback / dispute documentation.</b> Enter a student's email (exact) or name, and this
+      builds the printable evidence dossier: the booking record (who, what, where, when, Stripe ids),
+      the consent language, and <b>independent Brevo email logs</b> proving the booking notification
+      was sent and delivered. Print to PDF and attach it to the dispute response. The yellow internal
+      note is hidden automatically when printing.
+    </div>
+    <div class="errbox" id="err"></div>
+    <div class="viewer" id="viewer">
+      <div class="viewerbar"><span id="meta"></span></div>
+      <iframe id="frame" title="dossier"></iframe>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = 'https://cpr-syndicate-renewals.vercel.app';
+function pass(){ return sessionStorage.getItem('board_pass') || ''; }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+async function run(){
+  const q=document.getElementById('q').value.trim();
+  const err=document.getElementById('err'), viewer=document.getElementById('viewer'), printBtn=document.getElementById('print');
+  err.style.display='none'; if(!q) return;
+  document.getElementById('meta').textContent='Building dossier for '+q+'… (pulls up to 12 months of email logs, can take ~20s)';
+  viewer.style.display='block'; printBtn.style.display='none';
+  document.getElementById('frame').srcdoc='<div style="font-family:sans-serif;color:#8A8A99;padding:40px;text-align:center;font-weight:600">Assembling evidence…</div>';
+  try{
+    const r=await fetch(`${API}/api/dispute?q=${encodeURIComponent(q)}&pass=${encodeURIComponent(pass())}`);
+    if(r.status===401){ sessionStorage.removeItem('board_pass'); viewer.style.display='none'; return gate('Wrong passcode'); }
+    if(!r.ok){ const d=await r.json().catch(()=>({error:'HTTP '+r.status}));
+      viewer.style.display='none'; err.textContent=d.error||('HTTP '+r.status); err.style.display='block'; return; }
+    const html=await r.text();
+    document.getElementById('frame').srcdoc=html;
+    document.getElementById('meta').textContent='Dossier for '+q+' · use Print / PDF, the internal note box is excluded from print automatically';
+    printBtn.style.display='inline-block';
+  }catch(e){ viewer.style.display='none'; err.textContent=e.message; err.style.display='block'; }
+}
+function gate(errMsg){
+  document.getElementById('content').innerHTML=`<div class="gate"><h2>🔒 Disputes</h2><p>Enter the team passcode.</p><input id="pc" type="password" placeholder="passcode" autofocus><button id="go">Unlock</button>${errMsg?`<div class="err">${esc(errMsg)}</div>`:''}</div>`;
+  const submit=()=>{const v=document.getElementById('pc').value.trim();if(v){sessionStorage.setItem('board_pass',v);location.reload();}};
+  document.getElementById('go').onclick=submit; document.getElementById('pc').addEventListener('keydown',e=>{if(e.key==='Enter')submit();});
+}
+document.getElementById('run').addEventListener('click',run);
+document.getElementById('q').addEventListener('keydown',e=>{if(e.key==='Enter')run();});
+document.getElementById('print').addEventListener('click',()=>{const f=document.getElementById('frame');f.contentWindow.focus();f.contentWindow.print();});
+if(new URLSearchParams(location.search).get('embed')) document.body.classList.add('embed');
+if(!pass()) gate('');
+</script>
+</body>
+</html>
